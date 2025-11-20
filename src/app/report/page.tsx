@@ -4,6 +4,7 @@ import { auth } from '@/authConfig'
 import { redirect } from 'next/navigation'
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { LayoutDashboard, FileText, Save, User, X } from 'lucide-react';
 import KPITable, { KPIItem as TableKPIItem } from '../components/KPITable';
 
@@ -59,6 +60,7 @@ type TargetData = Record<string, string>;
 export default function ReportPage() {
 
   const router = useRouter();
+  const { data: session } = useSession();
 
   const [user, setUser] = useState<UserInfo | null>(null);
   const [activeKpi, setActiveKpi] = useState<TableKPIItem | null>(null);
@@ -152,6 +154,40 @@ export default function ReportPage() {
 
   const rowKeys = activeKpi && activeKpi.level === 'district' ? DISTRICTS : ['จังหวัด'];
 
+  let displayName = '';
+  let orgName = '';
+
+  const rawProfile = (session as any)?.user?.profile;
+  if (rawProfile) {
+    try {
+      const profile = JSON.parse(rawProfile as string);
+
+      const firstName =
+        profile.first_name_th ||
+        profile.firstname_th ||
+        profile.firstName ||
+        profile.given_name ||
+        '';
+      const lastName =
+        profile.last_name_th ||
+        profile.lastname_th ||
+        profile.lastName ||
+        profile.family_name ||
+        '';
+
+      const combined = `${firstName} ${lastName}`.trim();
+      displayName = combined || profile.name_th || profile.name || '';
+
+      orgName =
+        profile.position?.organization?.hname_th ||
+        profile.organization?.hname_th ||
+        profile.hname_th ||
+        '';
+    } catch (e) {
+      // ignore JSON parse errors, fallback to empty display
+    }
+  }
+
   return (
     <div className="min-h-screen font-sans" style={{ backgroundColor: '#F0FDF4' }}>
       <header className="bg-white shadow-sm border-b border-green-100">
@@ -165,13 +201,20 @@ export default function ReportPage() {
               <p className="text-xs text-green-600">ระบบรายงานตัวชี้วัด สสจ.พิษณุโลก</p>
             </div>
           </div>
-
-          <button
-            onClick={() => router.push('/home')}
-            className="flex items-center gap-2 text-sm text-gray-500 hover:text-green-600"
-          >
-            <LayoutDashboard size={18} /> กลับหน้าแดชบอร์ด
-          </button>
+          <div className="flex items-center gap-6">
+            {displayName && (
+              <div className="text-right text-xs text-gray-600">
+                <div className="font-semibold text-gray-800">{displayName}</div>
+                {orgName && <div className="text-[11px] text-gray-500">({orgName})</div>}
+              </div>
+            )}
+            <button
+              onClick={() => router.push('/home')}
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-green-600"
+            >
+              <LayoutDashboard size={18} /> กลับหน้าแดชบอร์ด
+            </button>
+          </div>
         </div>
       </header>
 

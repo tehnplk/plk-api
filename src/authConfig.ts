@@ -25,12 +25,14 @@ const authOptions = {
           }
           return {
             name: user.username,
-            profile: JSON.stringify(user)
+            profile: JSON.stringify(user),
+            ssj_department: (user as any).ssj_department,
           }
         }
         return {
           name: credentials.username as string || 'health-id',
           profile: credentials.profile!,
+          ssj_department: (credentials as any).ssj_department,
         };
       },
     }),
@@ -71,13 +73,15 @@ const authOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.profile = user.profile;
+        token.profile = (user as any).profile;
+        (token as any).ssj_department = (user as any).ssj_department;
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
         session.user.profile = token.profile; // Add user profile to the session
+        (session.user as any).ssj_department = (token as any).ssj_department;
       }
       return session;
     },

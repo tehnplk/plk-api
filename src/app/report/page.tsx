@@ -1,11 +1,9 @@
 'use client';
 
-import { auth } from '@/authConfig'
-import { redirect } from 'next/navigation'
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { LayoutDashboard, FileText, Save, User, X } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
+import { LayoutDashboard, FileText, Save, User, X, LogIn } from 'lucide-react';
 import KPITable, { KPIItem as TableKPIItem } from '../components/KPITable';
 
 const DISTRICTS = [
@@ -60,7 +58,7 @@ type TargetData = Record<string, string>;
 export default function ReportPage() {
 
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   const [user, setUser] = useState<UserInfo | null>(null);
   const [activeKpi, setActiveKpi] = useState<TableKPIItem | null>(null);
@@ -71,12 +69,25 @@ export default function ReportPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const storedDeptName = window.localStorage.getItem('selectedDeptId');
-    if (!storedDeptName) {
+    // ถ้ายังตรวจ session ไม่เสร็จ ให้รอก่อน
+    if (status === 'loading') return;
+
+    // ถ้าไม่มี session ให้กลับไปหน้า login
+    if (status === 'unauthenticated') {
       router.replace('/login');
       return;
     }
-    setUser({ department: storedDeptName });
+
+    // เลือก department จาก session ก่อน ถ้าไม่มีลองอ่านจาก localStorage
+    let effectiveDept = (session as any)?.user?.ssj_department as string | undefined;
+    if (!effectiveDept && typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem('selectedDeptId') || undefined;
+      if (stored && stored.trim()) {
+        effectiveDept = stored.trim();
+      }
+    }
+
+    setUser({ department: effectiveDept || 'ไม่ระบุกลุ่มงาน' });
 
     // load fiscal year from server config
     fetch('/api/config')
@@ -89,7 +100,7 @@ export default function ReportPage() {
       .catch(() => {
         // ignore errors, fall back to default
       });
-  }, [router]);
+  }, [router, status, session]);
 
   const yearShortPrev = ((moneyYear - 1) % 100).toString().padStart(2, '0');
   const yearShortCurr = (moneyYear % 100).toString().padStart(2, '0');
@@ -148,7 +159,7 @@ export default function ReportPage() {
     }));
   };
 
-  if (!user) {
+  if (status === 'loading' || !user) {
     return null;
   }
 
@@ -161,6 +172,13 @@ export default function ReportPage() {
   if (rawProfile) {
     try {
       const profile = JSON.parse(rawProfile as string);
+
+      const prefix =
+        profile.title_th ||
+        profile.prefix_th ||
+        profile.prename ||
+        profile.prename_th ||
+        '';
 
       const firstName =
         profile.first_name_th ||
@@ -175,7 +193,8 @@ export default function ReportPage() {
         profile.family_name ||
         '';
 
-      const combined = `${firstName} ${lastName}`.trim();
+      const nameCore = `${firstName} ${lastName}`.trim();
+      const combined = `${prefix ? prefix + ' ' : ''}${nameCore}`.trim();
       displayName = combined || profile.name_th || profile.name || '';
 
       orgName =
@@ -203,17 +222,34 @@ export default function ReportPage() {
           </div>
           <div className="flex items-center gap-6">
             {displayName && (
-              <div className="text-right text-xs text-gray-600">
-                <div className="font-semibold text-gray-800">{displayName}</div>
-                {orgName && <div className="text-[11px] text-gray-500">({orgName})</div>}
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-3 py-1 text-xs text-blue-700 shadow-sm max-w-[220px] md:max-w-xs">
+                <User size={14} className="text-blue-600" />
+                <div className="flex flex-col leading-tight overflow-hidden">
+                  <span className="font-semibold text-[11px] md:text-xs truncate">
+                    {displayName}
+                  </span>
+                  {orgName && (
+                    <span className="text-[10px] md:text-[11px] text-blue-700/80 truncate">
+                      {orgName}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
-            <button
-              onClick={() => router.push('/home')}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-green-600"
-            >
-              <LayoutDashboard size={18} /> กลับหน้าแดชบอร์ด
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => router.push('/home')}
+                className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 transition-all shadow-sm text-sm font-medium"
+              >
+                <LayoutDashboard size={16} /> กลับหน้าแดชบอร์ด
+              </button>
+              <button
+                onClick={() => signOut({ callbackUrl: '/login' })}
+                className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 border border-red-200 px-3 py-1 rounded-full"
+              >
+                <LogIn size={16} /> Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>

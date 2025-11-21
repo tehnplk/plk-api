@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSession, signOut } from 'next-auth/react';
 import {
   PieChart,
   Pie,
@@ -27,6 +28,7 @@ import {
   AlertCircle,
   MapPin,
   Target,
+  User,
 } from 'lucide-react';
 import KPITable from '../components/KPITable';
 
@@ -191,6 +193,7 @@ export default function HomePage() {
   const [selectedDistrictScope, setSelectedDistrictScope] = useState('ALL');
   const [mounted, setMounted] = useState(false);
   const [moneyYear, setMoneyYear] = useState<number>(DEFAULT_MONEY_YEAR);
+  const { data: session } = useSession();
 
   useEffect(() => {
     setMounted(true);
@@ -280,6 +283,43 @@ export default function HomePage() {
     };
   }, [selectedDistrictScope]);
 
+  let displayName = '';
+  const rawProfile = (session as any)?.user?.profile;
+  if (rawProfile) {
+    try {
+      const profile = JSON.parse(rawProfile as string);
+
+      const prefix =
+        profile.title_th ||
+        profile.prefix_th ||
+        profile.prename ||
+        profile.prename_th ||
+        '';
+
+      const firstName =
+        profile.first_name_th ||
+        profile.firstname_th ||
+        profile.firstName ||
+        profile.given_name ||
+        '';
+      const lastName =
+        profile.last_name_th ||
+        profile.lastname_th ||
+        profile.lastName ||
+        profile.family_name ||
+        '';
+      const nameCore = `${firstName} ${lastName}`.trim();
+      const combined = `${prefix ? prefix + ' ' : ''}${nameCore}`.trim();
+      displayName = combined || profile.name_th || profile.name || '';
+    } catch (e) {
+      // ignore JSON parse errors
+    }
+  }
+
+  if (!displayName && session?.user?.name) {
+    displayName = session.user.name;
+  }
+
   if (!mounted) {
     return null;
   }
@@ -302,13 +342,38 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div>
-            <Link
-              href="/login"
-              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-medium"
-            >
-              <LogIn size={16} /> เข้าสู่ระบบรายงาน
-            </Link>
+          <div className="flex items-center gap-4">
+            {session && displayName && (
+              <div className="hidden md:flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-3 py-1 text-xs text-blue-700 shadow-sm max-w-[220px]">
+                <User size={14} className="text-blue-600" />
+                <span className="font-semibold text-[11px] md:text-xs truncate">
+                  {displayName}
+                </span>
+              </div>
+            )}
+            {session ? (
+              <>
+                <Link
+                  href="/report"
+                  className="hidden md:flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 transition-all shadow-sm text-sm font-medium"
+                >
+                  <LayoutDashboard size={16} /> เข้าสู่ระบบรายงาน
+                </Link>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 border border-red-200 px-3 py-1 rounded-full"
+                >
+                  <LogIn size={16} /> Logout
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-medium"
+              >
+                <LogIn size={16} /> เข้าสู่ระบบรายงาน
+              </Link>
+            )}
           </div>
         </div>
       </header>

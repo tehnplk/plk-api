@@ -2,14 +2,25 @@
 
 import React, { useEffect, useState } from 'react';
 import { User, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { signInWithHealthId } from '../actions/sign-in';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { status } = useSession();
   const [departments, setDepartments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // ถ้า login แล้ว ให้ redirect ไป /report ทันที
+    if (status === 'authenticated') {
+      router.replace('/report');
+      return;
+    }
+
     const fetchDepartments = async () => {
       try {
         setLoading(true);
@@ -33,8 +44,9 @@ export default function LoginPage() {
       }
     };
 
+    // ยังโหลดรายชื่อกลุ่มงานตามปกติ ในกรณีที่ยังไม่ได้ login
     fetchDepartments();
-  }, []);
+  }, [status, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F0FDF4' }}>
@@ -60,6 +72,11 @@ export default function LoginPage() {
                 <form key={name} action={signInWithHealthId} className="w-full h-full">
                   <button
                     type="submit"
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        window.localStorage.setItem('selectedDeptId', name);
+                      }
+                    }}
                     className="w-full h-full min-h-[96px] px-4 py-5 text-left border border-gray-200 rounded-2xl hover:border-green-500 hover:bg-green-50 hover:text-green-700 transition-all group flex flex-col justify-between"
                   >
                     <div className="font-semibold leading-snug line-clamp-2">{name}</div>
@@ -73,11 +90,12 @@ export default function LoginPage() {
           )}
         </div>
 
-        <button
-          className="w-full mt-6 py-2 text-sm text-gray-400 hover:text-gray-600"
+        <Link
+          href="/"
+          className="block w-full mt-6 py-2 text-center text-sm text-gray-400 hover:text-gray-600"
         >
           กลับหน้าหลัก
-        </button>
+        </Link>
       </div>
     </div>
   );

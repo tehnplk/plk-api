@@ -1,11 +1,12 @@
-import NextAuth from "next-auth";
+import NextAuth, { type Session, type NextAuthConfig } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
 import LineProvider from "next-auth/providers/line";
 
 
-const authOptions = {
+const authOptions: NextAuthConfig = {
   session: {
     strategy: 'jwt',
     maxAge: 60 * 60 * 25, // 25 hours
@@ -79,16 +80,16 @@ const authOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT; user?: any }) {
       if (user) {
         token.profile = (user as any).profile;
         (token as any).ssj_department = (user as any).ssj_department;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (token && session.user) {
-        session.user.profile = token.profile; // Add user profile to the session
+        (session.user as any).profile = (token as any).profile; // Add user profile to the session
         (session.user as any).ssj_department = (token as any).ssj_department;
       }
       return session;

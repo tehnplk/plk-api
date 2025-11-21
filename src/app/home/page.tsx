@@ -66,57 +66,9 @@ const EXCELLENCE_STRATEGIES = [
   'Health-Related Economy Excellence',
 ];
 
-const DEFAULT_MONEY_YEAR = 2569;
-
-const DEPARTMENTS = [
-  { id: 'D01', name: 'กลุ่มงานยุทธศาสตร์ฯ' },
-  { id: 'D02', name: 'กลุ่มงานควบคุมโรค' },
-  { id: 'D03', name: 'กลุ่มงานส่งเสริมสุขภาพ' },
-  { id: 'D04', name: 'กลุ่มงานบริหารทรัพยากรบุคคล' },
-  { id: 'D05', name: 'กลุ่มงานทันตสาธารณสุข' },
-];
-
-const generateMockKPIs = () => {
-  const kpis: any[] = [];
-  for (let i = 1; i <= 25; i++) {
-    const level = Math.random() > 0.4 ? 'district' : 'province';
-    const statusRandom = Math.random();
-    let status: 'pass' | 'fail' | 'pending' = 'pending';
-    if (statusRandom > 0.6) status = 'pass';
-    else if (statusRandom > 0.3) status = 'fail';
-
-    const criteriaTypes = ['> 80%', '< 5 ต่อแสนประชากร', 'ผ่านเกณฑ์ระดับ 5', '> 90%', '100%'];
-    const criteria =
-      criteriaTypes[Math.floor(Math.random() * criteriaTypes.length)];
-
-    kpis.push({
-      id: `KPI-${String(i).padStart(3, '0')}`,
-      name: `ตัวชี้วัดที่ ${i} : ${
-        level === 'district'
-          ? 'อัตราการครอบคลุมวัคซีน (รายอำเภอ)'
-          : 'ร้อยละความพึงพอใจผู้รับบริการ (จังหวัด)'
-      }`,
-      level,
-      excellence:
-        EXCELLENCE_STRATEGIES[
-          Math.floor(Math.random() * EXCELLENCE_STRATEGIES.length)
-        ],
-      department:
-        DEPARTMENTS[Math.floor(Math.random() * DEPARTMENTS.length)].name,
-      criteria,
-      target: 80,
-      result:
-        status === 'pending'
-          ? null
-          : (Math.random() * 20 + 70).toFixed(2),
-      status,
-      lastUpdated: '15 พ.ย. 68',
-    });
-  }
-  return kpis;
-};
-
-const mockKPIs = generateMockKPIs();
+const DEFAULT_MONEY_YEAR = Number(
+  process.env.NEXT_PUBLIC_MONEY_YEAR,
+);
 
 const StatCard = ({ title, value, subtext, color, icon: Icon }: any) => (
   <div
@@ -208,6 +160,26 @@ export default function HomePage() {
       .catch(() => {
         // ignore errors, fall back to default
       });
+
+    fetch('/api/kpis')
+      .then((res) => res.json())
+      .then((json) => {
+        const rows = Array.isArray(json) ? json : json.data ?? [];
+        const set = new Set<string>();
+        rows.forEach((item: any) => {
+          const dept = String(item.ssj_department ?? '').trim();
+          if (dept) set.add(dept);
+        });
+        const list = Array.from(set);
+        if (typeof window !== 'undefined') {
+          try {
+            window.localStorage.setItem('cachedDepartments', JSON.stringify(list));
+          } catch {
+          }
+        }
+      })
+      .catch(() => {
+      });
   }, []);
 
   const yearShortPrev = ((moneyYear - 1) % 100).toString().padStart(2, '0');
@@ -228,14 +200,14 @@ export default function HomePage() {
   ];
 
   const stats = useMemo(() => {
-    const total = mockKPIs.length;
-    const pass = mockKPIs.filter((k) => k.status === 'pass').length;
-    const fail = mockKPIs.filter((k) => k.status === 'fail').length;
-    const pending = mockKPIs.filter((k) => k.status === 'pending').length;
-    const percentPass =
-      total > 0 ? ((pass / (total - pending)) * 100).toFixed(1) : 0;
+    const total = 25;
+    const pass = Math.floor(Math.random() * 10) + 10;
+    const fail = Math.floor(Math.random() * 5) + 3;
+    const pending = Math.max(total - pass - fail, 0);
+    const effectiveDenominator = Math.max(total - pending, 1);
+    const percentPass = ((pass / effectiveDenominator) * 100).toFixed(1);
 
-    let districtData = DISTRICTS.map((d) => ({
+    const districtData = DISTRICTS.map((d) => ({
       name: d,
       percent: Math.floor(Math.random() * 40 + 60),
     }));
@@ -254,20 +226,18 @@ export default function HomePage() {
     });
 
     const excellenceStats = EXCELLENCE_STRATEGIES.map((strat) => {
-      const group = mockKPIs.filter((k) => k.excellence === strat);
-      const gTotal = group.length;
-      const gPass = group.filter((k) => k.status === 'pass').length;
-      const gFail = group.filter((k) => k.status === 'fail').length;
-      const gPending = group.filter((k) => k.status === 'pending').length;
-      const denominator = gTotal - gPending;
+      const baseTotal = Math.floor(Math.random() * 5) + 3;
+      const basePass = Math.floor(baseTotal * (Math.random() * 0.4 + 0.4));
+      const baseFail = Math.floor((baseTotal - basePass) * Math.random());
+      const basePending = Math.max(baseTotal - basePass - baseFail, 0);
+      const denom = Math.max(baseTotal - basePending, 1);
       return {
         title: strat,
-        total: gTotal,
-        pass: gPass,
-        fail: gFail,
-        pending: gPending,
-        percent:
-          denominator > 0 ? ((gPass / denominator) * 100).toFixed(0) : 0,
+        total: baseTotal,
+        pass: basePass,
+        fail: baseFail,
+        pending: basePending,
+        percent: ((basePass / denom) * 100).toFixed(0),
       };
     });
 

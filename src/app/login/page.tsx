@@ -36,13 +36,40 @@ export default function LoginPage() {
           const dept = String(item.ssj_department ?? '').trim();
           if (dept) set.add(dept);
         });
-        setDepartments(Array.from(set));
+        const list = Array.from(set);
+        setDepartments(list);
+        if (typeof window !== 'undefined') {
+          try {
+            window.localStorage.setItem('cachedDepartments', JSON.stringify(list));
+          } catch {
+          }
+        }
       } catch (e: any) {
         setError(e?.message || 'โหลดข้อมูลกลุ่มงานไม่สำเร็จ');
       } finally {
         setLoading(false);
       }
     };
+
+    let usedCache = false;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('cachedDepartments');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setDepartments(parsed.map((x: any) => String(x)));
+            setLoading(false);
+            usedCache = true;
+          }
+        }
+      } catch {
+      }
+    }
+
+    if (usedCache) {
+      return;
+    }
 
     // ยังโหลดรายชื่อกลุ่มงานตามปกติ ในกรณีที่ยังไม่ได้ login
     fetchDepartments();

@@ -18,7 +18,9 @@ const DISTRICTS = [
   'เนินมะปราง',
 ];
 
-const DEFAULT_MONEY_YEAR = 2569;
+const DEFAULT_MONEY_YEAR = Number(
+  process.env.NEXT_PUBLIC_MONEY_YEAR ?? '2569',
+);
 
 type KpiLevel = 'province' | 'district';
 

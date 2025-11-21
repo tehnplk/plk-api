@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
         body: JSON.stringify({
             grant_type: 'authorization_code',
             code: code,
-            redirect_uri: 'http://localhost:3000/api/auth/healthid',
+            redirect_uri: process.env.HEALTH_REDIRECT_URI!,
             client_id: process.env.HEALTH_CLIENT_ID,
             client_secret: process.env.HEALTH_CLIENT_SECRET
         })

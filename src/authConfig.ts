@@ -15,19 +15,27 @@ const authOptions = {
       async authorize(credentials) {
         console.log("credentials = ", credentials);
         if (credentials['cred-way'] == 'user-pass') {
-          const user = await prisma.user.findUnique({
-            where: {
-              username: credentials?.username as string
-            }
-          })
-          if (!user) {
-            return {}; // This will cause authentication to fail and redirect to sign-in page
-          }
-          return {
-            name: user.username,
-            profile: JSON.stringify(user),
-            ssj_department: (user as any).ssj_department,
-          }
+          // ยังไม่เชื่อมต่อฐานข้อมูลจริง: ให้ login แบบ user-pass ไม่สำเร็จไปก่อน
+          /*
+           NOTE: โค้ด prisma ด้านล่างถูก comment ไว้ เพื่อให้ build ผ่าน
+           แต่ยังเก็บเป็นตัวอย่างเผื่อเชื่อมฐานข้อมูลภายหลัง
+
+           const user = await prisma.user.findUnique({
+             where: {
+               username: credentials?.username as string,
+             },
+           });
+           if (!user) {
+             return null; // ทำให้ auth fail และ redirect กลับหน้า sign-in
+           }
+           return {
+             name: user.username,
+             profile: JSON.stringify(user),
+             ssj_department: (user as any).ssj_department,
+           };
+          */
+
+          return null; // จะทำให้ authentication fail และ redirect กลับหน้า sign-in
         }
         return {
           name: credentials.username as string || 'health-id',

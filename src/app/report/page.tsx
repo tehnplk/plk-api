@@ -244,7 +244,7 @@ export default function ReportPage() {
                 <LayoutDashboard size={16} /> กลับหน้าแดชบอร์ด
               </button>
               <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
+                onClick={() => signOut({ redirectTo: '/login' })}
                 className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 border border-red-200 px-3 py-1 rounded-full"
               >
                 <LogIn size={16} /> Logout

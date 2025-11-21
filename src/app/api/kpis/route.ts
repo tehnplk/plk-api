@@ -1,17 +1,20 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const url = process.env.KPI_LIST_URL;
+  const baseUrl = process.env.ENDPOINT_URL;
 
-  if (!url) {
+  if (!baseUrl) {
     return NextResponse.json(
-      { error: 'KPI_LIST_URL is not configured' },
+      { error: 'ENDPOINT_URL is not configured' },
       { status: 500 },
     );
   }
 
   try {
-    const res = await fetch(url);
+    const upstreamUrl = `${baseUrl}?sheet=kpi`;
+
+    const res = await fetch(upstreamUrl);
+
     if (!res.ok) {
       return NextResponse.json(
         { error: `Upstream error: HTTP ${res.status}` },
@@ -23,7 +26,7 @@ export async function GET() {
     return NextResponse.json(data);
   } catch (err: any) {
     return NextResponse.json(
-      { error: err?.message || 'Failed to fetch KPI list' },
+      { error: err?.message || 'Failed to fetch data' },
       { status: 500 },
     );
   }

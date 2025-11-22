@@ -35,7 +35,9 @@ interface KPITableProps {
   showActionColumn?: boolean;
   onActionClick?: (kpi: KPIItem) => void;
   showHeaderSummary?: boolean;
-   showRowCountSummary?: boolean;
+  showRowCountSummary?: boolean;
+  moneyYear?: number;
+  refreshVersion?: number;
 }
 
 const KPITable: React.FC<KPITableProps> = ({
@@ -46,6 +48,8 @@ const KPITable: React.FC<KPITableProps> = ({
   onActionClick,
   showHeaderSummary,
   showRowCountSummary,
+  moneyYear,
+  refreshVersion,
 }) => {
   const [filterText, setFilterText] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | KPIStatus>('all');
@@ -58,6 +62,9 @@ const KPITable: React.FC<KPITableProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<'id' | 'name' | 'criteria' | 'level' | 'department'>('id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [kpiSummary, setKpiSummary] = useState<
+    Record<string, { rate: string | null; lastUpdated: string | null }>
+  >({});
 
   useEffect(() => {
     if (data && data.length > 0) return;
@@ -130,6 +137,97 @@ const KPITable: React.FC<KPITableProps> = ({
   }, [data]);
 
   const sourceData: KPIItem[] = data && data.length > 0 ? data : remoteData || [];
+
+  useEffect(() => {
+    if (!moneyYear || sourceData.length === 0) return;
+
+    let cancelled = false;
+
+    const monthFields = [
+      'result_oct',
+      'result_nov',
+      'result_dec',
+      'result_jan',
+      'result_feb',
+      'result_mar',
+      'result_apr',
+      'result_may',
+      'result_jun',
+      'result_jul',
+      'result_aug',
+      'result_sep',
+    ] as const;
+
+    const fetchSummary = async () => {
+      const result: Record<string, { rate: string | null; lastUpdated: string | null }> = {};
+
+      for (const item of sourceData) {
+        try {
+          const params = new URLSearchParams({
+            kpiId: item.id,
+            moneyYear: String(moneyYear),
+          });
+          const res = await fetch(`/api/kpi/save-prisma?${params.toString()}`);
+          if (!res.ok) continue;
+          const json = await res.json();
+          if (!json?.success || !Array.isArray(json.data) || json.data.length === 0) continue;
+
+          let targetTotal = 0;
+          let grandTotal = 0;
+          let lastUpdated: Date | null = null;
+
+          for (const row of json.data as any[]) {
+            const t = Number(row.kpi_tarket ?? 0);
+            if (!Number.isNaN(t)) targetTotal += t;
+
+            for (const field of monthFields) {
+              const v = Number(row[field] ?? 0);
+              if (!Number.isNaN(v)) grandTotal += v;
+            }
+
+            if (row.update_at) {
+              const d = new Date(row.update_at as string);
+              if (!Number.isNaN(d.getTime())) {
+                if (!lastUpdated || d > lastUpdated) {
+                  lastUpdated = d;
+                }
+              }
+            }
+          }
+
+          const divideNumber = item.divideNumber ?? 1;
+          let rate: string | null = null;
+          if (targetTotal > 0) {
+            const r = (grandTotal / targetTotal) * (divideNumber || 1);
+            rate = r.toFixed(2);
+          }
+
+          result[item.id] = {
+            rate,
+            lastUpdated: lastUpdated
+              ? lastUpdated.toLocaleDateString('th-TH', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                })
+              : null,
+          };
+        } catch {
+          // ignore per-KPI errors
+        }
+      }
+
+      if (!cancelled) {
+        setKpiSummary(result);
+      }
+    };
+
+    fetchSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [moneyYear, sourceData, refreshVersion]);
 
   const departmentOptions = useMemo(() => {
     const set = new Set<string>();
@@ -410,11 +508,11 @@ const KPITable: React.FC<KPITableProps> = ({
                   </td>
                   <td className="px-6 py-4 text-gray-500">{kpi.department}</td>
                   <td className="px-6 py-4 text-center font-bold">
-                    {kpi.result ? `${kpi.result}%` : '-'}
+                    {kpiSummary[kpi.id]?.rate ? `${kpiSummary[kpi.id]?.rate}%` : '-'}
                   </td>
                   <td className="px-6 py-4 text-center">{getStatusBadge(kpi.status)}</td>
                   <td className="px-6 py-4 text-center text-xs text-gray-500 whitespace-nowrap">
-                    {kpi.lastUpdated ?? '-'}
+                    {kpiSummary[kpi.id]?.lastUpdated ?? kpi.lastUpdated ?? '-'}
                   </td>
                   {showActionColumn && (
                     <td className="px-6 py-4 text-center">

@@ -1,0 +1,39 @@
+// Prisma schema for KPI report table (SQLite)
+// learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ตารางเก็บข้อมูลรายงาน KPI ตามปีงบประมาณ / พื้นที่ / ตัวชี้วัด
+model KpiReport {
+  money_year Int    // ปีงบประมาณ (PK)
+  area_name  String // ชื่อพื้นที่/อำเภอ/เขต (PK)
+  kpi_id     String // รหัส KPI (PK)
+
+  kpi_name   String        // ชื่อ KPI
+  kpi_tarket Float?        // ค่าเป้าหมาย (สะกดตามที่ระบุ)
+
+  // ผลงานรายเดือน ปีงบประมาณ ต.ค. - ก.ย.
+  result_oct Float?        // ตุลาคม
+  result_nov Float?        // พฤศจิกายน
+  result_dec Float?        // ธันวาคม
+  result_jan Float?        // มกราคม
+  result_feb Float?        // กุมภาพันธ์
+  result_mar Float?        // มีนาคม
+  result_apr Float?        // เมษายน
+  result_may Float?        // พฤษภาคม
+  result_jun Float?        // มิถุนายน
+  result_jul Float?        // กรกฎาคม
+  result_aug Float?        // สิงหาคม
+  result_sep Float?        // กันยายน
+
+  update_at  DateTime @updatedAt // วันที่อัปเดตล่าสุด
+
+  @@id([money_year, area_name, kpi_id])  // composite primary key
+  @@map("kpi_report")                   // ชื่อตารางจริงใน SQLite
+}

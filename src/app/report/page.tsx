@@ -69,6 +69,7 @@ export default function ReportPage() {
   const [gridData, setGridData] = useState<GridData>({});
   const [targetData, setTargetData] = useState<TargetData>({});
   const [moneyYear, setMoneyYear] = useState<number>(DEFAULT_MONEY_YEAR);
+  const [saveVersion, setSaveVersion] = useState<number>(0);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -144,7 +145,67 @@ export default function ReportPage() {
     });
     setGridData(initial);
     setTargetData(targets);
-  }, [activeKpi]);
+
+    // โหลดข้อมูลเดิมจาก SQLite (Prisma)
+    const loadExisting = async () => {
+      try {
+        const params = new URLSearchParams({
+          kpiId: activeKpi.id,
+          moneyYear: String(moneyYear),
+        });
+        const res = await fetch(`/api/kpi/save-prisma?${params.toString()}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!json?.success || !Array.isArray(json.data)) return;
+
+        const monthFields = [
+          'result_oct',
+          'result_nov',
+          'result_dec',
+          'result_jan',
+          'result_feb',
+          'result_mar',
+          'result_apr',
+          'result_may',
+          'result_jun',
+          'result_jul',
+          'result_aug',
+          'result_sep',
+        ] as const;
+
+        const loadedGrid: GridData = { ...initial };
+        const loadedTargets: TargetData = { ...targets };
+
+        for (const row of json.data as any[]) {
+          const area = row.area_name as string;
+          if (!rowKeys.includes(area)) continue;
+
+          if (row.kpi_tarket != null && !Number.isNaN(row.kpi_tarket)) {
+            const t = Number(row.kpi_tarket);
+            loadedTargets[area] = t === 0 ? '' : String(t);
+          }
+
+          for (let i = 0; i < MONTHS.length && i < monthFields.length; i++) {
+            const field = monthFields[i];
+            const v = row[field] as number | null | undefined;
+            if (v != null && !Number.isNaN(v)) {
+              const n = Number(v);
+              loadedGrid[area][MONTHS[i]] = n === 0 ? '' : String(n);
+            } else {
+              loadedGrid[area][MONTHS[i]] = '';
+            }
+          }
+        }
+
+        setGridData(loadedGrid);
+        setTargetData(loadedTargets);
+      } catch {
+        // เงียบ error ไว้ ไม่ให้รบกวนผู้ใช้
+      }
+    };
+
+    loadExisting();
+  }, [activeKpi, moneyYear]);
 
   const handleCellChange = (district: string, month: string, value: string) => {
     setGridData((prev) => ({
@@ -226,6 +287,8 @@ export default function ReportPage() {
             hideDepartmentFilter
             showActionColumn
             showHeaderSummary
+            moneyYear={moneyYear}
+            refreshVersion={saveVersion}
             onActionClick={(kpi) => setActiveKpi(kpi)}
           />
         </div>
@@ -237,9 +300,11 @@ export default function ReportPage() {
           rowKeys={rowKeys}
           gridData={gridData}
           targetData={targetData}
+          moneyYear={moneyYear}
           onClose={() => setActiveKpi(null)}
           onTargetChange={handleTargetChange}
           onCellChange={handleCellChange}
+          onSaved={() => setSaveVersion((v) => v + 1)}
         />
       )}
     </div>

@@ -15,9 +15,11 @@ interface ReportKpiModalProps {
   rowKeys: string[];
   gridData: GridData;
   targetData: TargetData;
+  moneyYear: number;
   onClose: () => void;
   onTargetChange: (district: string, value: string) => void;
   onCellChange: (district: string, month: string, value: string) => void;
+  onSaved?: () => void;
 }
 
 export default function ReportKpiModal({
@@ -26,12 +28,15 @@ export default function ReportKpiModal({
   rowKeys,
   gridData,
   targetData,
+  moneyYear,
   onClose,
   onTargetChange,
   onCellChange,
+  onSaved,
 }: ReportKpiModalProps) {
   const router = useRouter();
   const [activeRow, setActiveRow] = React.useState<number | null>(null);
+  const [isSaving, setIsSaving] = React.useState(false);
   // ฟังก์ชันช่วยเลือก cell ตามตำแหน่งแถว/คอลัมน์ แล้ว focus + select ค่าในช่อง
   const focusCell = (rowIndex: number, colIndex: number) => {
     const selector = `input[data-cell-row="${rowIndex}"][data-cell-col="${colIndex}"]`;
@@ -152,6 +157,48 @@ export default function ReportKpiModal({
     const fixed = Math.abs(num);
     onCellChange(district, month, fixed.toString());
   };
+
+  // ฟังก์ชันบันทึกข้อมูลลง Prisma SQLite
+  const handleSave = async () => {
+    setIsSaving(true);
+    
+    try {
+      const response = await fetch('/api/kpi/save-prisma', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          kpiId: activeKpi.id,
+          kpiName: activeKpi.name,
+          targetData,
+          gridData,
+          months,
+          moneyYear,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // ใช้ toast แทน alert เมื่อบันทึกสำเร็จ
+        const { toast } = await import('react-toastify');
+        toast.success('บันทึกข้อมูลเรียบร้อยแล้ว');
+        router.refresh();
+        onSaved?.();
+        onClose();
+      } else {
+        const { toast } = await import('react-toastify');
+        toast.error('เกิดข้อผิดพลาดในการบันทึก: ' + (result.error || 'ไม่ทราบสาเหตุ'));
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      const { toast } = await import('react-toastify');
+      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+    } finally {
+      setIsSaving(false);
+    }
+  };
   return (
     <div className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm">
       <div className="bg-white w-full mx-5 my-5 h-[calc(100vh-40px)] rounded-2xl shadow-xl overflow-hidden flex flex-col">
@@ -218,6 +265,18 @@ export default function ReportKpiModal({
                     colSpan={3}
                   >
                     ไตรมาส 4
+                  </th>
+                  <th
+                    className="px-3 py-2 border-b text-center text-gray-600 whitespace-nowrap"
+                    rowSpan={2}
+                  >
+                    Total
+                  </th>
+                  <th
+                    className="px-3 py-2 border-b text-center text-gray-600 whitespace-nowrap"
+                    rowSpan={2}
+                  >
+                    Rate
                   </th>
                 </tr>
                 <tr>
@@ -379,6 +438,29 @@ export default function ReportKpiModal({
                       return grandTotal.toLocaleString("th-TH");
                     })()}
                   </td>
+                  <td className="px-3 py-2 border-t text-right text-gray-900 font-bold">
+                    {(() => {
+                      const targetTotal = rowKeys.reduce((sum, dist) => {
+                        const v = parseFloat(targetData[dist] || "0");
+                        return sum + (isNaN(v) ? 0 : v);
+                      }, 0);
+                      const grandTotal = rowKeys.reduce((sumDist, dist) => {
+                        return (
+                          sumDist +
+                          months.reduce((sumMonth, m) => {
+                            const v = parseFloat(gridData[dist]?.[m] || "0");
+                            return sumMonth + (isNaN(v) ? 0 : v);
+                          }, 0)
+                        );
+                      }, 0);
+                      const divideNumber = activeKpi?.divideNumber ?? 1;
+                      const rate =
+                        targetTotal > 0
+                          ? (grandTotal / targetTotal) * (divideNumber || 1)
+                          : 0;
+                      return rate ? rate.toFixed(2) : "-";
+                    })()}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -386,13 +468,11 @@ export default function ReportKpiModal({
           <div className="mt-4 flex justify-end">
             <button
               type="button"
-              className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-1"
-              onClick={() => {
-                router.refresh();
-                onClose();
-              }}
+              className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleSave}
+              disabled={isSaving}
             >
-              บันทึก
+              {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
           </div>
           </form>

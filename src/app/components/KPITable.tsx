@@ -190,6 +190,8 @@ const KPITable: React.FC<KPITableProps> = ({
   const mophCount = filteredData.filter((item) => item.isMophKpi).length;
   const provinceCount = totalCount - mophCount;
 
+  const totalColumns = showActionColumn ? 9 : 8;
+
   const getStatusBadge = (status: KPIStatus) => {
     switch (status) {
       case 'pass':
@@ -358,6 +360,7 @@ const KPITable: React.FC<KPITableProps> = ({
               </th>
               <th className="px-6 py-4 text-center">ผลลัพธ์</th>
               <th className="px-6 py-4 text-center">สถานะ</th>
+              <th className="px-6 py-4 text-center">อัพเดทล่าสุด</th>
               {showActionColumn && (
                 <th className="px-6 py-4 text-center">Action</th>
               )}
@@ -367,7 +370,7 @@ const KPITable: React.FC<KPITableProps> = ({
             {loading && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={totalColumns}
                   className="px-6 py-6 text-center text-gray-400 text-sm animate-pulse"
                 >
                   กำลังดึงข้อมูล...
@@ -376,7 +379,7 @@ const KPITable: React.FC<KPITableProps> = ({
             )}
             {!loading && error && (
               <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-red-500 text-sm">
+                <td colSpan={totalColumns} className="px-6 py-4 text-center text-red-500 text-sm">
                   {error}
                 </td>
               </tr>
@@ -410,6 +413,9 @@ const KPITable: React.FC<KPITableProps> = ({
                     {kpi.result ? `${kpi.result}%` : '-'}
                   </td>
                   <td className="px-6 py-4 text-center">{getStatusBadge(kpi.status)}</td>
+                  <td className="px-6 py-4 text-center text-xs text-gray-500 whitespace-nowrap">
+                    {kpi.lastUpdated ?? '-'}
+                  </td>
                   {showActionColumn && (
                     <td className="px-6 py-4 text-center">
                       <button
@@ -427,7 +433,7 @@ const KPITable: React.FC<KPITableProps> = ({
             {!loading && !error && filteredData.length > 0 && (
               <tr className="bg-gray-50">
                 <td
-                  colSpan={7}
+                  colSpan={totalColumns}
                   className="px-6 py-3 text-right text-xs text-gray-500 font-medium"
                 >
                   รวม {totalCount.toLocaleString('th-TH')} ตัวชี้วัด

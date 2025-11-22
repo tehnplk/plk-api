@@ -32,6 +32,15 @@ export default function ReportKpiModal({
 }: ReportKpiModalProps) {
   const router = useRouter();
   const [activeRow, setActiveRow] = React.useState<number | null>(null);
+
+  const focusCell = (rowIndex: number, colIndex: number) => {
+    const selector = `input[data-cell-row="${rowIndex}"][data-cell-col="${colIndex}"]`;
+    const next = document.querySelector<HTMLInputElement>(selector);
+    if (next) {
+      next.focus();
+      next.select?.();
+    }
+  };
   const handleArrowKey = (
     e: React.KeyboardEvent<HTMLInputElement>,
     rowIndex: number,
@@ -68,12 +77,61 @@ export default function ReportKpiModal({
     // ถ้าไม่มีการเปลี่ยนแถว/คอลัมน์ (อยู่ขอบ) ให้หยุด
     if (nextRow === rowIndex && nextCol === colIndex) return;
 
-    const selector = `input[data-cell-row="${nextRow}"][data-cell-col="${nextCol}"]`;
-    const next = document.querySelector<HTMLInputElement>(selector);
-    if (next) {
-      next.focus();
-      next.select?.();
+    focusCell(nextRow, nextCol);
+  };
+
+  React.useEffect(() => {
+    const handleWindowKeyDown = (e: KeyboardEvent) => {
+      if (
+        activeRow === null &&
+        (e.key === "ArrowUp" ||
+          e.key === "ArrowDown" ||
+          e.key === "ArrowLeft" ||
+          e.key === "ArrowRight")
+      ) {
+        e.preventDefault();
+        focusCell(0, 0);
+      }
+    };
+
+    window.addEventListener("keydown", handleWindowKeyDown);
+    return () => window.removeEventListener("keydown", handleWindowKeyDown);
+  }, [activeRow]);
+
+  const handleTargetInputChange = (district: string, raw: string) => {
+    // อนุญาตให้ลบค่าจนว่าง หรือพิมพ์ '-' ชั่วคราวตอนกำลังแก้ไข
+    if (raw === "" || raw === "-") {
+      onTargetChange(district, "");
+      return;
     }
+
+    const num = parseFloat(raw);
+    if (isNaN(num)) return;
+    if (num < 0) {
+      // ถ้าน้อยกว่า 0 ไม่อัปเดตค่า
+      return;
+    }
+
+    onTargetChange(district, raw);
+  };
+
+  const handleCellInputChange = (
+    district: string,
+    month: string,
+    raw: string
+  ) => {
+    if (raw === "" || raw === "-") {
+      onCellChange(district, month, "");
+      return;
+    }
+
+    const num = parseFloat(raw);
+    if (isNaN(num)) return;
+    if (num < 0) {
+      return;
+    }
+
+    onCellChange(district, month, raw);
   };
   return (
     <div className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm">
@@ -197,9 +255,12 @@ export default function ReportKpiModal({
                       >
                         <input
                           type="number"
+                          min={0}
                           className="w-full text-center text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
                           value={targetData[dist] ?? ""}
-                          onChange={(e) => onTargetChange(dist, e.target.value)}
+                          onChange={(e) =>
+                            handleTargetInputChange(dist, e.target.value)
+                          }
                           data-cell-row={rowIndex}
                           data-cell-col={0}
                           onFocus={() => setActiveRow(rowIndex)}
@@ -216,9 +277,12 @@ export default function ReportKpiModal({
                         >
                           <input
                             type="number"
+                            min={0}
                             className="w-full text-center text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-400"
                             value={gridData[dist]?.[m] ?? ""}
-                            onChange={(e) => onCellChange(dist, m, e.target.value)}
+                            onChange={(e) =>
+                              handleCellInputChange(dist, m, e.target.value)
+                            }
                             data-cell-row={rowIndex}
                             data-cell-col={monthIndex + 1}
                             onFocus={() => setActiveRow(rowIndex)}

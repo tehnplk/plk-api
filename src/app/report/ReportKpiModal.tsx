@@ -32,7 +32,7 @@ export default function ReportKpiModal({
 }: ReportKpiModalProps) {
   const router = useRouter();
   const [activeRow, setActiveRow] = React.useState<number | null>(null);
-
+  // ฟังก์ชันช่วยเลือก cell ตามตำแหน่งแถว/คอลัมน์ แล้ว focus + select ค่าในช่อง
   const focusCell = (rowIndex: number, colIndex: number) => {
     const selector = `input[data-cell-row="${rowIndex}"][data-cell-col="${colIndex}"]`;
     const next = document.querySelector<HTMLInputElement>(selector);
@@ -41,6 +41,7 @@ export default function ReportKpiModal({
       next.select?.();
     }
   };
+  // จัดการการเลื่อนโฟกัสด้วยปุ่มลูกศร 4 ทิศระหว่าง cell ต่าง ๆ
   const handleArrowKey = (
     e: React.KeyboardEvent<HTMLInputElement>,
     rowIndex: number,
@@ -80,6 +81,8 @@ export default function ReportKpiModal({
     focusCell(nextRow, nextCol);
   };
 
+  // ถ้า modal เพิ่งเปิดและยังไม่มี cell ไหนถูก focus
+  // ถ้า user กดปุ่มลูกศรครั้งแรก ให้โฟกัสไปที่ cell แรก (แถวแรก คอลัมน์เป้า)
   React.useEffect(() => {
     const handleWindowKeyDown = (e: KeyboardEvent) => {
       if (
@@ -98,40 +101,56 @@ export default function ReportKpiModal({
     return () => window.removeEventListener("keydown", handleWindowKeyDown);
   }, [activeRow]);
 
+  // เปลี่ยนค่า input เป้า ระหว่างพิมพ์ (ยังไม่บังคับเป็นค่าบวก)
+  // ปล่อยให้ blur เป็นคนจัดการ validation แทน
   const handleTargetInputChange = (district: string, raw: string) => {
-    // อนุญาตให้ลบค่าจนว่าง หรือพิมพ์ '-' ชั่วคราวตอนกำลังแก้ไข
+    // อนุญาตให้พิมพ์ค่าอะไรก็ได้ระหว่างแก้ไข (รวมถึงค่าลบ)
+    // เดี๋ยวตอน blur จะจัดการแปลงเป็นค่าบวกให้เองถ้าจำเป็น
+    onTargetChange(district, raw);
+  };
+
+  // ตอนหลุดโฟกัสจากช่องเป้า ถ้าค่าติดลบ ให้แปลงเป็นค่าบวก (absolute)
+  const handleTargetBlur = (district: string, raw: string) => {
     if (raw === "" || raw === "-") {
       onTargetChange(district, "");
       return;
     }
 
     const num = parseFloat(raw);
-    if (isNaN(num)) return;
-    if (num < 0) {
-      // ถ้าน้อยกว่า 0 ไม่อัปเดตค่า
+    if (isNaN(num)) {
+      onTargetChange(district, "");
       return;
     }
 
-    onTargetChange(district, raw);
+    const fixed = Math.abs(num);
+    onTargetChange(district, fixed.toString());
   };
 
+  // เปลี่ยนค่าใน cell รายเดือน ระหว่างพิมพ์ (ยอมให้เป็นค่าลบชั่วคราวได้)
   const handleCellInputChange = (
     district: string,
     month: string,
     raw: string
   ) => {
+    onCellChange(district, month, raw);
+  };
+
+  // ตอนหลุดโฟกัสช่องรายเดือน ถ้าค่าติดลบหรือไม่ใช่ตัวเลข
+  // จะถูกเคลียร์เป็นว่าง หรือแปลงเป็นค่าบวกตามกรณี
+  const handleCellBlur = (district: string, month: string, raw: string) => {
     if (raw === "" || raw === "-") {
       onCellChange(district, month, "");
       return;
     }
 
     const num = parseFloat(raw);
-    if (isNaN(num)) return;
-    if (num < 0) {
+    if (isNaN(num)) {
+      onCellChange(district, month, "");
       return;
     }
 
-    onCellChange(district, month, raw);
+    const fixed = Math.abs(num);
+    onCellChange(district, month, fixed.toString());
   };
   return (
     <div className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm">
@@ -232,6 +251,7 @@ export default function ReportKpiModal({
                   const rate =
                     target > 0 ? (rowTotal / target) * (divideNumber || 1) : 0;
 
+                  // เมื่อแถวนี้คือแถวที่มี focus อยู่ ให้หนาเส้นขอบบน/ล่าง และเปลี่ยนสีเส้น
                   const activeBorder =
                     activeRow === rowIndex
                       ? " border-t-2 border-b-2 border-blue-700"
@@ -261,6 +281,9 @@ export default function ReportKpiModal({
                           onChange={(e) =>
                             handleTargetInputChange(dist, e.target.value)
                           }
+                          onBlur={(e) =>
+                            handleTargetBlur(dist, e.target.value)
+                          }
                           data-cell-row={rowIndex}
                           data-cell-col={0}
                           onFocus={() => setActiveRow(rowIndex)}
@@ -282,6 +305,9 @@ export default function ReportKpiModal({
                             value={gridData[dist]?.[m] ?? ""}
                             onChange={(e) =>
                               handleCellInputChange(dist, m, e.target.value)
+                            }
+                            onBlur={(e) =>
+                              handleCellBlur(dist, m, e.target.value)
                             }
                             data-cell-row={rowIndex}
                             data-cell-col={monthIndex + 1}

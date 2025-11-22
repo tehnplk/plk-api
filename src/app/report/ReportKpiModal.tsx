@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, X } from "lucide-react";
 import type { KPIItem as TableKPIItem } from "../components/KPITable";
 
@@ -29,6 +30,51 @@ export default function ReportKpiModal({
   onTargetChange,
   onCellChange,
 }: ReportKpiModalProps) {
+  const router = useRouter();
+  const [activeRow, setActiveRow] = React.useState<number | null>(null);
+  const handleArrowKey = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    rowIndex: number,
+    colIndex: number
+  ) => {
+    const key = e.key;
+    if (
+      key !== "ArrowUp" &&
+      key !== "ArrowDown" &&
+      key !== "ArrowLeft" &&
+      key !== "ArrowRight"
+    ) {
+      return;
+    }
+
+    e.preventDefault();
+
+    const maxRow = rowKeys.length - 1;
+    const maxCol = months.length; // col 0 = เป้า, 1..months.length = เดือน
+
+    let nextRow = rowIndex;
+    let nextCol = colIndex;
+
+    if (key === "ArrowUp" && rowIndex > 0) {
+      nextRow = rowIndex - 1;
+    } else if (key === "ArrowDown" && rowIndex < maxRow) {
+      nextRow = rowIndex + 1;
+    } else if (key === "ArrowLeft" && colIndex > 0) {
+      nextCol = colIndex - 1;
+    } else if (key === "ArrowRight" && colIndex < maxCol) {
+      nextCol = colIndex + 1;
+    }
+
+    // ถ้าไม่มีการเปลี่ยนแถว/คอลัมน์ (อยู่ขอบ) ให้หยุด
+    if (nextRow === rowIndex && nextCol === colIndex) return;
+
+    const selector = `input[data-cell-row="${nextRow}"][data-cell-col="${nextCol}"]`;
+    const next = document.querySelector<HTMLInputElement>(selector);
+    if (next) {
+      next.focus();
+      next.select?.();
+    }
+  };
   return (
     <div className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm">
       <div className="bg-white w-full mx-5 my-5 h-[calc(100vh-40px)] rounded-2xl shadow-xl overflow-hidden flex flex-col">
@@ -41,6 +87,9 @@ export default function ReportKpiModal({
             <p className="text-sm text-gray-800 font-semibold mt-1">
               {activeKpi.id} - {activeKpi.name}
             </p>
+            <p className="text-xs text-gray-600 mt-0.5">
+              เกณฑ์: {activeKpi.criteria}
+            </p>
           </div>
           <button
             type="button"
@@ -52,24 +101,69 @@ export default function ReportKpiModal({
           </button>
         </div>
         <div className="px-6 py-4 overflow-auto">
-          <div className="inline-block min-w-full align-middle">
-            <table className="min-w-full border border-gray-200 text-xs">
+          <form>
+            <div className="inline-block min-w-full align-middle">
+              <table className="min-w-full border border-gray-200 text-xs">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 border-b border-r text-left text-gray-600">อำเภอ</th>
-                  <th className="px-3 py-2 border-b border-r text-center text-gray-600 whitespace-nowrap">เป้า</th>
-                  {months.map((m) => (
-                    <th
-                      key={m}
-                      className="px-3 py-2 border-b border-r text-center text-gray-600 whitespace-nowrap"
-                    >
-                      {m}
-                    </th>
-                  ))}
+                  <th
+                    className="px-3 py-2 border-b border-r text-left text-gray-600"
+                    rowSpan={2}
+                  >
+                    
+                  </th>
+                  <th
+                    className="px-3 py-2 border-b border-r text-center text-gray-600 whitespace-nowrap"
+                    rowSpan={2}
+                  >
+                    เป้า
+                  </th>
+                  <th
+                    className="px-3 py-2 border-b border-r text-center text-gray-600 bg-emerald-50"
+                    colSpan={3}
+                  >
+                    ไตรมาส 1
+                  </th>
+                  <th
+                    className="px-3 py-2 border-b border-r text-center text-gray-600 bg-blue-50"
+                    colSpan={3}
+                  >
+                    ไตรมาส 2
+                  </th>
+                  <th
+                    className="px-3 py-2 border-b border-r text-center text-gray-600 bg-amber-50"
+                    colSpan={3}
+                  >
+                    ไตรมาส 3
+                  </th>
+                  <th
+                    className="px-3 py-2 border-b border-r text-center text-gray-600 bg-rose-50"
+                    colSpan={3}
+                  >
+                    ไตรมาส 4
+                  </th>
+                </tr>
+                <tr>
+                  {months.map((m, idx) => {
+                    let quarterBg = "";
+                    if (idx < 3) quarterBg = "bg-emerald-50"; // Q1
+                    else if (idx < 6) quarterBg = "bg-blue-50"; // Q2
+                    else if (idx < 9) quarterBg = "bg-amber-50"; // Q3
+                    else quarterBg = "bg-rose-50"; // Q4
+
+                    return (
+                      <th
+                        key={m}
+                        className={`px-3 py-2 border-b border-r text-center text-gray-600 whitespace-nowrap ${quarterBg}`}
+                      >
+                        {m}
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
-                {rowKeys.map((dist) => {
+                {rowKeys.map((dist, rowIndex) => {
                   const rowTotal = months.reduce((sum, m) => {
                     const v = parseFloat(gridData[dist]?.[m] || "0");
                     return sum + (isNaN(v) ? 0 : v);
@@ -80,36 +174,74 @@ export default function ReportKpiModal({
                   const rate =
                     target > 0 ? (rowTotal / target) * (divideNumber || 1) : 0;
 
+                  const activeBorder =
+                    activeRow === rowIndex
+                      ? " border-t-2 border-b-2 border-blue-700"
+                      : "";
+
                   return (
                     <tr key={dist}>
-                      <td className="px-3 py-2 border-b border-r text-sm text-gray-700 whitespace-nowrap">
+                      <td
+                        className={
+                          "px-3 py-2 border-b border-r text-sm text-gray-700 whitespace-nowrap" +
+                          activeBorder
+                        }
+                      >
                         {dist}
                       </td>
-                      <td className="px-2 py-2 border-b border-r text-center bg-gray-50">
+                      <td
+                        className={
+                          "px-2 py-2 border-b border-r text-center bg-gray-50" +
+                          activeBorder
+                        }
+                      >
                         <input
                           type="number"
                           className="w-full text-center text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
                           value={targetData[dist] ?? ""}
                           onChange={(e) => onTargetChange(dist, e.target.value)}
+                          data-cell-row={rowIndex}
+                          data-cell-col={0}
+                          onFocus={() => setActiveRow(rowIndex)}
+                          onKeyDown={(e) => handleArrowKey(e, rowIndex, 0)}
                         />
                       </td>
-                      {months.map((m) => (
+                      {months.map((m, monthIndex) => (
                         <td
                           key={m}
-                          className="px-2 py-2 border-b border-r text-center"
+                          className={
+                            "px-2 py-2 border-b border-r text-center" +
+                            activeBorder
+                          }
                         >
                           <input
                             type="number"
                             className="w-full text-center text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-400"
                             value={gridData[dist]?.[m] ?? ""}
                             onChange={(e) => onCellChange(dist, m, e.target.value)}
+                            data-cell-row={rowIndex}
+                            data-cell-col={monthIndex + 1}
+                            onFocus={() => setActiveRow(rowIndex)}
+                            onKeyDown={(e) =>
+                              handleArrowKey(e, rowIndex, monthIndex + 1)
+                            }
                           />
                         </td>
                       ))}
-                      <td className="px-3 py-2 border-b text-right text-gray-700 font-semibold bg-gray-50">
+                      <td
+                        className={
+                          "px-3 py-2 border-b text-right text-gray-700 font-semibold bg-gray-50" +
+                          activeBorder
+                        }
+                      >
                         {rowTotal.toLocaleString("th-TH")}
                       </td>
-                      <td className="px-3 py-2 border-b text-right text-gray-700 font-semibold bg-gray-50">
+                      <td
+                        className={
+                          "px-3 py-2 border-b text-right text-gray-700 font-semibold bg-gray-50" +
+                          activeBorder
+                        }
+                      >
                         {rate ? rate.toFixed(2) : "-"}
                       </td>
                     </tr>
@@ -161,6 +293,19 @@ export default function ReportKpiModal({
               </tbody>
             </table>
           </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-1"
+              onClick={() => {
+                router.refresh();
+                onClose();
+              }}
+            >
+              บันทึก
+            </button>
+          </div>
+          </form>
         </div>
       </div>
     </div>

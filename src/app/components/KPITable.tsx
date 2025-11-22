@@ -38,6 +38,7 @@ interface KPITableProps {
   showRowCountSummary?: boolean;
   moneyYear?: number;
   refreshVersion?: number;
+  isLoading?: boolean;
 }
 
 const KPITable: React.FC<KPITableProps> = ({
@@ -50,6 +51,7 @@ const KPITable: React.FC<KPITableProps> = ({
   showRowCountSummary,
   moneyYear,
   refreshVersion,
+  isLoading = false,
 }) => {
   const [filterText, setFilterText] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | KPIStatus>('all');
@@ -464,8 +466,22 @@ const KPITable: React.FC<KPITableProps> = ({
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {loading && (
+          <tbody className="divide-y divide-gray-100 relative">
+            {isLoading && (
+              <tr>
+                <td
+                  colSpan={totalColumns}
+                  className="px-6 py-8"
+                >
+                  <div className="flex flex-col items-center justify-center space-y-3">
+                    <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="text-sm text-gray-500 font-medium">กำลังโหลดข้อมูลตัวชี้วัด...</div>
+                    <div className="text-xs text-gray-400">กรุณารอสักครู่</div>
+                  </div>
+                </td>
+              </tr>
+            )}
+            {loading && !isLoading && (
               <tr>
                 <td
                   colSpan={totalColumns}
@@ -475,14 +491,14 @@ const KPITable: React.FC<KPITableProps> = ({
                 </td>
               </tr>
             )}
-            {!loading && error && (
+            {!loading && !isLoading && error && (
               <tr>
                 <td colSpan={totalColumns} className="px-6 py-4 text-center text-red-500 text-sm">
                   {error}
                 </td>
               </tr>
             )}
-            {!loading && !error &&
+            {!loading && !isLoading && !error &&
               filteredData.map((kpi) => (
                 <tr key={kpi.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-green-700">{kpi.id}</td>

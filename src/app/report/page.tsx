@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { User } from 'lucide-react';
+import { User, FileText } from 'lucide-react';
 import KPITable, { KPIItem as TableKPIItem } from '../components/KPITable';
 import ReportNavbar from './ReportNavbar';
 import ReportKpiModal from './ReportKpiModal';
@@ -70,6 +70,7 @@ export default function ReportPage() {
   const [targetData, setTargetData] = useState<TargetData>({});
   const [moneyYear, setMoneyYear] = useState<number>(DEFAULT_MONEY_YEAR);
   const [saveVersion, setSaveVersion] = useState<number>(0);
+  const [isDataLoading, setIsDataLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -148,6 +149,7 @@ export default function ReportPage() {
 
     // โหลดข้อมูลเดิมจาก SQLite (Prisma)
     const loadExisting = async () => {
+      setIsDataLoading(true);
       try {
         const params = new URLSearchParams({
           kpiId: activeKpi.id,
@@ -201,6 +203,8 @@ export default function ReportPage() {
         setTargetData(loadedTargets);
       } catch {
         // เงียบ error ไว้ ไม่ให้รบกวนผู้ใช้
+      } finally {
+        setIsDataLoading(false);
       }
     };
 
@@ -225,7 +229,49 @@ export default function ReportPage() {
   };
 
   if (status === 'loading' || !user) {
-    return null;
+    return (
+      <div className="min-h-screen font-sans" style={{ backgroundColor: '#F0FDF4' }}>
+        {/* Skeleton Navbar */}
+        <header className="bg-white shadow-sm border-b border-green-100" aria-live="polite" aria-busy="true">
+          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold shadow animate-pulse">
+                <FileText size={22} />
+              </div>
+              <div className="space-y-1">
+                <div className="h-5 bg-gray-200 rounded w-48 animate-pulse"></div>
+                <div className="h-3 bg-gray-200 rounded w-64 animate-pulse"></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="h-8 bg-gray-200 rounded-full w-40 animate-pulse"></div>
+              <div className="flex gap-4">
+                <div className="h-8 bg-gray-200 rounded w-28 animate-pulse"></div>
+                <div className="h-8 bg-gray-200 rounded w-20 animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </header>
+        
+        {/* Skeleton Main Content */}
+        <main className="container mx-auto px-4 py-6" aria-live="polite" aria-busy="true">
+          <div className="mt-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 bg-gray-200 rounded-full animate-pulse"></div>
+              <div className="h-6 bg-gray-200 rounded w-32 animate-pulse"></div>
+            </div>
+            {/* Skeleton Table */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="flex flex-col items-center justify-center space-y-3" role="status" aria-live="polite">
+                <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
+                <div className="text-sm text-gray-500 font-medium">กำลังโหลดข้อมูลตัวชี้วัด...</div>
+                <div className="text-xs text-gray-400">กรุณารอสักครู่</div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   const rowKeys = activeKpi && activeKpi.level === 'district' ? DISTRICTS : ['จังหวัด'];
@@ -289,6 +335,7 @@ export default function ReportPage() {
             showHeaderSummary
             moneyYear={moneyYear}
             refreshVersion={saveVersion}
+            isLoading={isDataLoading}
             onActionClick={(kpi) => setActiveKpi(kpi)}
           />
         </div>

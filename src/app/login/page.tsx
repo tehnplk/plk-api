@@ -14,6 +14,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Set document title
+  useEffect(() => {
+    document.title = 'เลือกกลุ่มงาน - ระบบรายงาน KPI';
+  }, []);
+
   useEffect(() => {
     // ถ้า login แล้ว ให้ redirect ไป /report ทันที
     if (status === 'authenticated') {

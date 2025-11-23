@@ -1,11 +1,19 @@
 
+'use client';
+
 import { signInWithHealthId,} from '../actions/sign-in'
+import { useEffect } from 'react'
 
 export default function ProviderPage() {
+  // Set document title
+  useEffect(() => {
+    document.title = 'ทดสอบระบบ Login - Provider';
+  }, []);
+
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-full max-w-md">
-        <h1 className="text-center mb-8">Provider Test Page</h1>
+        <h1 className="text-center mb-8">ทดสอบระบบ Login - Provider</h1>
         <form action={signInWithHealthId} className="w-full">
           <button
             type="submit"

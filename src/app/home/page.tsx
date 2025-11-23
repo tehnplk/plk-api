@@ -141,6 +141,11 @@ export default function HomePage() {
   const [refreshVersion, setRefreshVersion] = useState(0);
   const { data: session } = useSession();
 
+  // Set document title
+  useEffect(() => {
+    document.title = 'ภาพรวม KPI จังหวัดพิษณุโลก';
+  }, []);
+
   const handleRefreshKpis = async () => {
     setIsKpiLoading(true);
     
@@ -172,11 +177,42 @@ export default function HomePage() {
       });
     } catch (error) {
       console.error('Failed to refresh KPI data:', error);
-      toast.error('รีเฟรชข้อมูลล้มเหลว กรุณาลองใหม่', {
-        position: "top-right",
-        autoClose: 5000,
-        theme: "colored",
-      });
+      
+      // Try to restore from cache if API fails
+      if (typeof window !== 'undefined') {
+        try {
+          const cachedData = localStorage.getItem('cachedKpiData');
+          if (cachedData) {
+            const parsedData = JSON.parse(cachedData);
+            setKpiData(parsedData);
+            console.log(`Using cache as fallback after refresh failed: ${parsedData.length} records`);
+            toast.warning('ใช้ข้อมูลเก่าจากแคช กรุณารีเฟรชเพื่อข้อมูลล่าสุด', {
+              position: "top-right",
+              autoClose: 5000,
+              theme: "colored",
+            });
+          } else {
+            toast.error('รีเฟรชข้อมูลล้มเหลว ไม่มีข้อมูลสำรอง', {
+              position: "top-right",
+              autoClose: 5000,
+              theme: "colored",
+            });
+          }
+        } catch (fallbackError) {
+          console.warn('Fallback cache read failed:', fallbackError);
+          toast.error('รีเฟรชข้อมูลล้มเหลว กรุณาลองใหม่', {
+            position: "top-right",
+            autoClose: 5000,
+            theme: "colored",
+          });
+        }
+      } else {
+        toast.error('รีเฟรชข้อมูลล้มเหลว กรุณาลองใหม่', {
+          position: "top-right",
+          autoClose: 5000,
+          theme: "colored",
+        });
+      }
     } finally {
       setIsKpiLoading(false);
     }

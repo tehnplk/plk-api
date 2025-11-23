@@ -44,6 +44,11 @@ export default function KPIDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [moneyYear, setMoneyYear] = useState<number>(2569);
 
+  // Set document title
+  useEffect(() => {
+    document.title = 'รายละเอียด KPI';
+  }, []);
+
   useEffect(() => {
     if (!kpiId) return;
 
@@ -199,7 +204,7 @@ export default function KPIDetailPage() {
       <div className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-center">
-            <h1 className="text-xl font-bold text-gray-800">รายละเอียดตัวชี้วัด</h1>
+            <h1 className="text-xl font-bold text-gray-800">รายละเอียด KPI</h1>
           </div>
         </div>
       </div>

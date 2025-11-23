@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const timeoutId = setTimeout(() => {
       console.log('Request timeout triggered, aborting fetch...');
       controller.abort();
-    }, 10000); // Reduced to 10 second timeout
+    }, 25000); // Increased to 25 second timeout
     
     console.log('Making request to Google Sheets API...');
     const upstreamUrl = `${ENDPOINT_URL}?sheet=kpi`;
@@ -101,12 +101,15 @@ export async function GET(request: NextRequest) {
       count: transformedData.length,
       source: 'google_sheets',
       lastSyncedAt: new Date(),
+      timestamp: Date.now(), // Add timestamp to prevent caching
     };
     
-    // Add caching headers
+    // Remove caching headers to ensure fresh data
     return NextResponse.json(response_data, {
       headers: {
-        'Cache-Control': 'public, max-age=300, s-maxage=600', // 5 min client, 10 min CDN
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
     

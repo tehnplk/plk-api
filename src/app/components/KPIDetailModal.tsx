@@ -345,15 +345,15 @@ export default function KPIDetailModal({
                                 {district.area_name}
                               </td>
                               <td className="px-2 py-2 text-center border border-gray-200 text-xs">
-                                {district.target !== null ? district.target : '-'}
+                                {district.target !== null && district.target > 0 ? district.target : '-'}
                               </td>
                               {district.monthlyValues.map((value, index) => (
                                 <td key={index} className="px-2 py-2 text-center border border-gray-200 text-xs">
-                                  {value !== null ? value : '-'}
+                                  {value !== null && value > 0 ? value : '-'}
                                 </td>
                               ))}
                               <td className="px-2 py-2 text-center font-bold border border-gray-200 text-xs">
-                                {district.total}
+                                {district.total > 0 ? district.total : '-'}
                               </td>
                               <td className="px-2 py-2 text-center border border-gray-200 text-xs">
                                 <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-xs font-bold ${
@@ -363,7 +363,7 @@ export default function KPIDetailModal({
                                       ? 'bg-yellow-100 text-yellow-800'
                                       : 'bg-red-100 text-red-800'
                                 }`}>
-                                  {district.rate}
+                                  {district.rate > 0 ? district.rate : '-'}
                                 </span>
                               </td>
                             </tr>
@@ -381,8 +381,9 @@ export default function KPIDetailModal({
                               visibleData.reduce((sum, d) => sum + (d.monthlyValues[monthIndex] || 0), 0)
                             );
                             const grandTotal = visibleData.reduce((sum, d) => sum + d.total, 0);
-                            const averageRate = visibleData.length > 0 
-                              ? Math.round((visibleData.reduce((sum, d) => sum + d.rate, 0) / visibleData.length) * 100) / 100
+                            const divideNumber = kpiDetail?.divideNumber || 1;
+                            const summaryRate = totalTarget > 0 
+                              ? Math.round((grandTotal / totalTarget) * divideNumber * 100) / 100
                               : 0;
                             
                             return (
@@ -399,17 +400,17 @@ export default function KPIDetailModal({
                                   </td>
                                 ))}
                                 <td className="px-2 py-2 text-center border border-gray-200 text-xs">
-                                  {grandTotal}
+                                  {grandTotal > 0 ? grandTotal : '-'}
                                 </td>
                                 <td className="px-2 py-2 text-center border border-gray-200 text-xs">
                                   <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-xs font-bold ${
-                                    averageRate >= 100 
+                                    summaryRate >= 100 
                                       ? 'bg-green-100 text-green-800' 
-                                      : averageRate >= 80 
+                                      : summaryRate >= 80 
                                         ? 'bg-yellow-100 text-yellow-800'
                                         : 'bg-red-100 text-red-800'
                                   }`}>
-                                    {averageRate}
+                                    {summaryRate > 0 ? summaryRate : '-'}
                                   </span>
                                 </td>
                               </tr>

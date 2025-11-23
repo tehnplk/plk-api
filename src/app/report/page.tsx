@@ -3,26 +3,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { User, FileText } from 'lucide-react';
+import { User, FileText, RefreshCw } from 'lucide-react';
 import KPITable, { KPIItem as TableKPIItem } from '../components/KPITable';
 import ReportNavbar from './ReportNavbar';
 import ReportKpiModal from './ReportKpiModal';
-
-const DISTRICTS = [
-  'เมืองพิษณุโลก',
-  'นครไทย',
-  'ชาติตระการ',
-  'บางระกำ',
-  'บางกระทุ่ม',
-  'พรหมพิราม',
-  'วัดโบสถ์',
-  'วังทอง',
-  'เนินมะปราง',
-];
-
-const DEFAULT_MONEY_YEAR = Number(
-  process.env.NEXT_PUBLIC_MONEY_YEAR ?? '2569',
-);
+import { kpiCache } from '@/utils/kpiCache';
+import { toast } from 'react-toastify';
+import { DISTRICTS, DEFAULT_MONEY_YEAR } from '@/config/constants';
 
 type KpiLevel = 'province' | 'district';
 
@@ -71,6 +58,31 @@ export default function ReportPage() {
   const [moneyYear, setMoneyYear] = useState<number>(DEFAULT_MONEY_YEAR);
   const [saveVersion, setSaveVersion] = useState<number>(0);
   const [isDataLoading, setIsDataLoading] = useState<boolean>(false);
+  const [cacheAge, setCacheAge] = useState<number | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  // Get cached KPI data in the right format for KPITable (memoized)
+  const cachedKpiData = useMemo(() => {
+    const cachedData = kpiCache.get();
+    if (!cachedData) return [];
+    
+    const rows = Array.isArray(cachedData) ? cachedData : cachedData.data ?? [];
+    return rows.map((item: any) => ({
+      id: String(item.id ?? ''),
+      name: String(item.name ?? ''),
+      excellence: String(item.excellence ?? ''),
+      criteria: String(item.evaluation_criteria ?? ''),
+      level: item.area_level === 'อำเภอ' ? 'district' as const : 'province' as const,
+      department: String(item.ssj_department ?? ''),
+      result: null,
+      status: 'pending' as const,
+      target: typeof item.target_result === 'number' ? item.target_result : undefined,
+      lastUpdated: undefined,
+      isMophKpi: String(item.is_moph_kpi ?? '').toUpperCase() === 'YES',
+      divideNumber: typeof item.divide_number === 'number' ? item.divide_number : 
+                   typeof item.divide_number === 'string' ? parseFloat(item.divide_number) || undefined : undefined,
+    }));
+  }, [saveVersion, refreshCounter]); // Re-calculate when saveVersion or refreshCounter changes
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -106,7 +118,61 @@ export default function ReportPage() {
       .catch(() => {
         // ignore errors, fall back to default
       });
+
+    // Check cache age for display
+    if (kpiCache.isValid()) {
+      setCacheAge(kpiCache.getAge());
+    }
   }, [router, status, session]);
+
+  const handleRefreshKpis = async () => {
+    try {
+      // Clear cache and reset data immediately
+      kpiCache.clear();
+      setCacheAge(null);
+      
+      console.log('Fetching fresh KPI data...');
+      const res = await fetch('/api/kpis');
+      const json = await res.json();
+      const rows = Array.isArray(json) ? json : json.data ?? [];
+      
+      console.log('API response:', json);
+      console.log('Parsed rows:', rows);
+      console.log('Rows length:', rows.length);
+      
+      kpiCache.set(json);
+      setCacheAge(0);
+      setRefreshCounter(prev => prev + 1); // Force KPITable re-render
+      
+      console.log('KPI data refreshed and cached on report page');
+      
+      // Show success toast
+      toast.success('รีเฟรชข้อมูลสำเร็จ', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+      });
+    } catch (error) {
+      console.error('Failed to refresh KPI data:', error);
+      
+      // Show error toast
+      toast.error('รีเฟรชข้อมูลล้มเหลว กรุณาลองใหม่', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+      });
+    }
+  };
 
   const yearShortPrev = ((moneyYear - 1) % 100).toString().padStart(2, '0');
   const yearShortCurr = (moneyYear % 100).toString().padStart(2, '0');
@@ -182,8 +248,8 @@ export default function ReportPage() {
           const area = row.area_name as string;
           if (!rowKeys.includes(area)) continue;
 
-          if (row.kpi_tarket != null && !Number.isNaN(row.kpi_tarket)) {
-            const t = Number(row.kpi_tarket);
+          if (row.kpi_target != null && !Number.isNaN(row.kpi_target)) {
+            const t = Number(row.kpi_target);
             loadedTargets[area] = t === 0 ? '' : String(t);
           }
 
@@ -324,11 +390,31 @@ export default function ReportPage() {
 
       <main className="container mx-auto px-4 py-6">
         <div className="mt-4 space-y-4">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <User size={20} className="text-green-600" />
-            กลุ่มงาน {user.department}
-          </h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <User size={20} className="text-green-600" />
+              กลุ่มงาน {user.department}
+            </h2>
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-gray-500">
+                {cacheAge !== null ? (
+                  cacheAge === 0 ? 'ข้อมูลล่าสุด' : `แคช ${Math.floor(cacheAge)} นาที`
+                ) : (
+                  kpiCache.isValid() ? 'แคชพร้อมใช้' : 'ไม่มีข้อมูลแคช'
+                )}
+              </span>
+              <button 
+                onClick={handleRefreshKpis}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2"
+              >
+                <RefreshCw size={16} />
+                รีเฟรชข้อมูล
+              </button>
+            </div>
+          </div>
           <KPITable
+            key={refreshCounter}
+            data={cachedKpiData}
             initialDepartment={user.department}
             hideDepartmentFilter
             showActionColumn

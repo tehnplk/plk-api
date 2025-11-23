@@ -51,14 +51,14 @@ export async function POST(request: NextRequest) {
     for (const area_name of areaNames) {
       const targetRaw = targetData[area_name] ?? ''
       const targetNum = Number(targetRaw)
-      const kpi_tarket = Number.isFinite(targetNum) ? targetNum : null
+      const kpi_target = Number.isFinite(targetNum) ? targetNum : null
 
       const data: any = {
         money_year: moneyYearNum,
         area_name,
         kpi_id: kpiId,
         kpi_name: kpiName,
-        kpi_tarket,
+        kpi_target,
       }
 
       // map เดือนในฟอร์ม → คอลัมน์ result_oct..result_sep ตามลำดับ

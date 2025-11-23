@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileText, Search, Save } from 'lucide-react';
+import { FileText, Search, Save, TrendingUp } from 'lucide-react';
+import KPIDetailModal from './KPIDetailModal';
 
 type KPIStatus = 'pass' | 'fail' | 'pending';
 
@@ -49,16 +50,17 @@ const KPITable: React.FC<KPITableProps> = ({
   onActionClick,
   showHeaderSummary,
   showRowCountSummary,
-  moneyYear,
+  moneyYear = 2569,
   refreshVersion,
-  isLoading = false,
+  isLoading,
 }) => {
-  const [filterText, setFilterText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | KPIStatus>('all');
-  const [kpiTypeFilter, setKpiTypeFilter] = useState<'all' | 'moph' | 'province'>('all');
-  const [departmentFilter, setDepartmentFilter] = useState<'all' | string>(
-    initialDepartment || 'all',
-  );
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState(initialDepartment || 'ทั้งหมด');
+  const [selectedStatus, setSelectedStatus] = useState<KPIStatus | 'ทั้งหมด'>('ทั้งหมด');
+  const [selectedLevel, setSelectedLevel] = useState<'province' | 'district' | 'ทั้งหมด'>('ทั้งหมด');
+  const [showMophOnly, setShowMophOnly] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedKpiId, setSelectedKpiId] = useState<string | null>(null);
   const [remoteData, setRemoteData] = useState<KPIItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -179,7 +181,7 @@ const KPITable: React.FC<KPITableProps> = ({
           let lastUpdated: Date | null = null;
 
           for (const row of json.data as any[]) {
-            const t = Number(row.kpi_tarket ?? 0);
+            const t = Number(row.kpi_target ?? 0);
             if (!Number.isNaN(t)) targetTotal += t;
 
             for (const field of monthFields) {
@@ -269,25 +271,21 @@ const KPITable: React.FC<KPITableProps> = ({
     return String(va).localeCompare(String(vb), 'th') * dir;
   });
 
-  const filteredData = sortedData.filter((item) => {
+  const filteredData = sortedData.filter((item: KPIItem) => {
     const matchText =
-      item.name.toLowerCase().includes(filterText.toLowerCase()) ||
-      item.id.toLowerCase().includes(filterText.toLowerCase());
-    const matchStatus = statusFilter === 'all' || item.status === statusFilter;
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = selectedStatus === 'ทั้งหมด' || item.status === selectedStatus;
     const matchKpiType =
-      kpiTypeFilter === 'all'
-        ? true
-        : kpiTypeFilter === 'moph'
-        ? item.isMophKpi === true
-        : item.isMophKpi !== true;
+      selectedLevel === 'ทั้งหมด' || item.level === selectedLevel;
     const matchDepartment =
-      departmentFilter === 'all' || item.department === departmentFilter;
-
+      selectedDepartment === 'ทั้งหมด' || item.department === selectedDepartment;
+    
     return matchText && matchStatus && matchKpiType && matchDepartment;
   });
 
   const totalCount = filteredData.length;
-  const mophCount = filteredData.filter((item) => item.isMophKpi).length;
+  const mophCount = filteredData.filter((item: KPIItem) => item.isMophKpi).length;
   const provinceCount = totalCount - mophCount;
 
   const totalColumns = showActionColumn ? 9 : 8;
@@ -349,36 +347,36 @@ const KPITable: React.FC<KPITableProps> = ({
               type="text"
               placeholder="ค้นหารหัส หรือ ชื่อตัวชี้วัด..."
               className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 w-full md:w-64"
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <select
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as 'all' | KPIStatus)}
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value as 'ทั้งหมด' | KPIStatus)}
           >
-            <option value="all">สถานะทั้งหมด</option>
+            <option value="ทั้งหมด">สถานะทั้งหมด</option>
             <option value="pass">ผ่านเกณฑ์</option>
             <option value="fail">ไม่ผ่านเกณฑ์</option>
             <option value="pending">รอประเมิน</option>
           </select>
           <select
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            value={kpiTypeFilter}
-            onChange={(e) => setKpiTypeFilter(e.target.value as 'all' | 'moph' | 'province')}
+            value={selectedLevel}
+            onChange={(e) => setSelectedLevel(e.target.value as 'ทั้งหมด' | 'province' | 'district')}
           >
-            <option value="all">ประเภทตัวชี้วัดทั้งหมด</option>
-            <option value="moph">ตัวชี้วัดตรวจราชการ</option>
+            <option value="ทั้งหมด">ประเภทตัวชี้วัดทั้งหมด</option>
             <option value="province">ตัวชี้วัดจังหวัด</option>
+            <option value="district">ตัวชี้วัดอำเภอ</option>
           </select>
           {!hideDepartmentFilter && (
             <select
               className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value as 'all' | string)}
+              value={selectedDepartment}
+              onChange={(e) => setSelectedDepartment(e.target.value as 'ทั้งหมด' | string)}
             >
-              <option value="all">กลุ่มงานทั้งหมด</option>
+              <option value="ทั้งหมด">กลุ่มงานทั้งหมด</option>
               {departmentOptions.map((dept) => (
                 <option key={dept} value={dept}>
                   {dept}
@@ -432,16 +430,6 @@ const KPITable: React.FC<KPITableProps> = ({
                 <button
                   type="button"
                   className="inline-flex items-center gap-1 hover:text-green-700"
-                  onClick={() => handleSort('criteria')}
-                >
-                  เกณฑ์
-                  {renderSortIndicator('criteria')}
-                </button>
-              </th>
-              <th className="px-6 py-4 text-center">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 hover:text-green-700"
                   onClick={() => handleSort('level')}
                 >
                   ระดับ
@@ -458,8 +446,18 @@ const KPITable: React.FC<KPITableProps> = ({
                   {renderSortIndicator('department')}
                 </button>
               </th>
-              <th className="px-6 py-4 text-center">ผลลัพธ์</th>
-              <th className="px-6 py-4 text-center">สถานะ</th>
+              <th className="px-6 py-4 text-center">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 hover:text-green-700"
+                  onClick={() => handleSort('criteria')}
+                >
+                  เกณฑ์
+                  {renderSortIndicator('criteria')}
+                </button>
+              </th>
+              <th className="px-6 py-4 text-center">ผลงาน</th>
+              <th className="px-6 py-4 text-center">ดูรายละเอียด</th>
               <th className="px-6 py-4 text-center">อัพเดทล่าสุด</th>
               {showActionColumn && (
                 <th className="px-6 py-4 text-center">Action</th>
@@ -499,7 +497,7 @@ const KPITable: React.FC<KPITableProps> = ({
               </tr>
             )}
             {!loading && !isLoading && !error &&
-              filteredData.map((kpi) => (
+              filteredData.map((kpi: KPIItem) => (
                 <tr key={kpi.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-green-700">{kpi.id}</td>
                   <td className="px-6 py-4">
@@ -507,9 +505,6 @@ const KPITable: React.FC<KPITableProps> = ({
                     <div className="text-xs text-gray-400 mt-0.5">
                       {EXCELLENCE_DESCRIPTION[kpi.excellence] ?? kpi.excellence}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-center text-gray-600 bg-gray-50/50 font-mono text-xs">
-                    {kpi.criteria}
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span
@@ -523,10 +518,31 @@ const KPITable: React.FC<KPITableProps> = ({
                     </span>
                   </td>
                   <td className="px-6 py-4 text-gray-500">{kpi.department}</td>
-                  <td className="px-6 py-4 text-center font-bold">
-                    {kpiSummary[kpi.id]?.rate ? `${kpiSummary[kpi.id]?.rate}%` : '-'}
+                  <td className="px-6 py-4 text-center text-gray-600 bg-gray-50/50 font-mono text-xs">
+                    {kpi.criteria}
                   </td>
-                  <td className="px-6 py-4 text-center">{getStatusBadge(kpi.status)}</td>
+                  <td className="px-6 py-4 text-center">
+                    {kpiSummary[kpi.id]?.rate ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                        {kpiSummary[kpi.id]?.rate}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center rounded-full border border-blue-200 text-blue-600 hover:bg-blue-50 p-2"
+                      title="ดูรายละเอียดและกราฟ"
+                      onClick={() => {
+                        setSelectedKpiId(kpi.id);
+                        setModalOpen(true);
+                      }}
+                    >
+                      <TrendingUp size={16} />
+                    </button>
+                  </td>
                   <td className="px-6 py-4 text-center text-xs text-gray-500 whitespace-nowrap">
                     {kpiSummary[kpi.id]?.lastUpdated ?? kpi.lastUpdated ?? '-'}
                   </td>
@@ -564,6 +580,19 @@ const KPITable: React.FC<KPITableProps> = ({
           <div className="p-8 text-center text-gray-400">ไม่พบข้อมูลตัวชี้วัด</div>
         )}
       </div>
+      
+      {/* KPI Detail Modal */}
+      {modalOpen && selectedKpiId && (
+        <KPIDetailModal
+          isOpen={modalOpen}
+          onClose={() => {
+            setModalOpen(false);
+            setSelectedKpiId(null);
+          }}
+          kpiId={selectedKpiId}
+          moneyYear={moneyYear}
+        />
+      )}
     </div>
   );
 };

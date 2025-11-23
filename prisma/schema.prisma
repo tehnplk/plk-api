@@ -16,7 +16,7 @@ model KpiReport {
   kpi_id     String // รหัส KPI (PK)
 
   kpi_name   String        // ชื่อ KPI
-  kpi_tarket Float?        // ค่าเป้าหมาย (สะกดตามที่ระบุ)
+  kpi_target Float?        // ค่าเป้าหมาย
 
   // ผลงานรายเดือน ปีงบประมาณ ต.ค. - ก.ย.
   result_oct Float?        // ตุลาคม

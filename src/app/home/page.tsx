@@ -17,9 +17,11 @@ import {
   LineChart,
   Line,
 } from 'recharts';
-import { FileText, CheckCircle, XCircle, AlertCircle, MapPin, Target, Activity } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, AlertCircle, MapPin, Target, Activity, RefreshCw } from 'lucide-react';
 import KPITable from '../components/KPITable';
 import HomeNavbar from './HomeNavbar';
+import { kpiCache } from '@/utils/kpiCache';
+import { toast } from 'react-toastify';
 
 const THEME = {
   primary: '#00A651',
@@ -134,6 +136,11 @@ export default function HomePage() {
   const [selectedDistrictScope, setSelectedDistrictScope] = useState('ALL');
   const [mounted, setMounted] = useState(false);
   const [moneyYear, setMoneyYear] = useState<number>(DEFAULT_MONEY_YEAR);
+  const [kpiData, setKpiData] = useState<any[]>([]);
+  const [isKpiLoading, setIsKpiLoading] = useState(false);
+  const [cacheAge, setCacheAge] = useState<number | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const { data: session } = useSession();
 
   useEffect(() => {
@@ -150,26 +157,141 @@ export default function HomePage() {
         // ignore errors, fall back to default
       });
 
-    fetch('/api/kpis')
-      .then((res) => res.json())
-      .then((json) => {
-        const rows = Array.isArray(json) ? json : json.data ?? [];
-        const set = new Set<string>();
-        rows.forEach((item: any) => {
-          const dept = String(item.ssj_department ?? '').trim();
-          if (dept) set.add(dept);
-        });
-        const list = Array.from(set);
-        if (typeof window !== 'undefined') {
-          try {
-            window.localStorage.setItem('cachedDepartments', JSON.stringify(list));
-          } catch {
+    // Load KPI data with localStorage caching
+    const loadKpiData = async () => {
+      setIsKpiLoading(true);
+      
+      try {
+        // Try to get from cache first
+        const cachedData = kpiCache.get();
+        if (cachedData) {
+          const rows = Array.isArray(cachedData) ? cachedData : cachedData.data ?? [];
+          setKpiData(rows);
+          setCacheAge(kpiCache.getAge());
+          console.log('Using cached KPI data');
+          
+          // Only fetch fresh data if cache is stale (older than 5 minutes)
+          if (kpiCache.getAge() > 5) {
+            console.log('Cache is stale, fetching fresh data in background');
+            try {
+              const res = await fetch('/api/kpis');
+              const json = await res.json();
+              const rows = Array.isArray(json) ? json : json.data ?? [];
+              
+              // Update cache and state
+              kpiCache.set(json);
+              setKpiData(rows);
+              setCacheAge(0);
+              console.log('Fetched fresh KPI data and cached it');
+            } catch (error) {
+              console.error('Background refresh failed:', error);
+              // Keep using cached data
+            }
           }
+        } else {
+          // No cache, fetch fresh data
+          console.log('No cache found, fetching fresh data');
+          const res = await fetch('/api/kpis');
+          const json = await res.json();
+          const rows = Array.isArray(json) ? json : json.data ?? [];
+          
+          // Update cache and state
+          kpiCache.set(json);
+          setKpiData(rows);
+          setCacheAge(0);
+          console.log('Fetched fresh KPI data and cached it');
         }
-      })
-      .catch(() => {
-      });
+        
+      } catch (error) {
+        console.error('Failed to fetch KPI data:', error);
+        // If API fails and we have cached data, keep using it
+        const cachedData = kpiCache.get();
+        if (cachedData) {
+          const rows = Array.isArray(cachedData) ? cachedData : cachedData.data ?? [];
+          setKpiData(rows);
+          setCacheAge(kpiCache.getAge());
+        }
+      } finally {
+        setIsKpiLoading(false);
+      }
+    };
+
+    loadKpiData();
   }, []);
+
+  // Cache departments from KPI data
+  useEffect(() => {
+    if (kpiData.length > 0 && typeof window !== 'undefined') {
+      const set = new Set<string>();
+      kpiData.forEach((item: any) => {
+        const dept = String(item.ssj_department ?? '').trim();
+        if (dept) set.add(dept);
+      });
+      const list = Array.from(set);
+      try {
+        window.localStorage.setItem('cachedDepartments', JSON.stringify(list));
+      } catch {
+        // ignore localStorage errors
+      }
+    }
+  }, [kpiData]);
+
+  const handleRefreshKpis = async () => {
+    setIsKpiLoading(true);
+    
+    // Clear cache and reset data immediately
+    kpiCache.clear();
+    setKpiData([]);
+    setCacheAge(null);
+    
+    try {
+      console.log('Fetching fresh KPI data...');
+      const res = await fetch('/api/kpis');
+      const json = await res.json();
+      const rows = Array.isArray(json) ? json : json.data ?? [];
+      
+      console.log('API response:', json);
+      console.log('Parsed rows:', rows);
+      console.log('Rows length:', rows.length);
+      
+      kpiCache.set(json);
+      setKpiData(rows);
+      setCacheAge(0);
+      setRefreshCounter(prev => prev + 1); // Force KPITable re-render
+      setRefreshVersion(prev => prev + 1); // Force KPITable to re-fetch results
+      
+      console.log('KPI data refreshed and cached');
+      console.log('Current kpiData state:', rows);
+      
+      // Show success toast
+      toast.success('รีเฟรชข้อมูลสำเร็จ', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+      });
+    } catch (error) {
+      console.error('Failed to refresh KPI data:', error);
+      
+      // Show error toast
+      toast.error('รีเฟรชข้อมูลล้มเหลว กรุณาลองใหม่', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+      });
+    } finally {
+      setIsKpiLoading(false);
+    }
+  };
 
   const yearShortPrev = ((moneyYear - 1) % 100).toString().padStart(2, '0');
   const yearShortCurr = (moneyYear % 100).toString().padStart(2, '0');
@@ -293,6 +415,13 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <MapPin className="text-green-600" size={20} />
               <span className="text-sm font-bold text-gray-700">พื้นที่รายงาน:</span>
+              <span className="text-xs text-gray-500 ml-2">
+                {cacheAge !== null ? (
+                  cacheAge === 0 ? 'ข้อมูลล่าสุด' : `แคช ${Math.floor(cacheAge)} นาที`
+                ) : (
+                  isKpiLoading ? '(กำลังโหลด...)' : 'ไม่มีข้อมูล'
+                )}
+              </span>
             </div>
             <div className="flex gap-2">
               <select
@@ -309,6 +438,14 @@ export default function HomePage() {
               </select>
               <button className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm transition-colors">
                 แสดงผล
+              </button>
+              <button 
+                onClick={handleRefreshKpis}
+                disabled={isKpiLoading}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                <RefreshCw size={16} className={isKpiLoading ? 'animate-spin' : ''} />
+                รีเฟรชข้อมูล
               </button>
             </div>
           </div>
@@ -495,7 +632,28 @@ export default function HomePage() {
             </div>
           </div>
 
-          <KPITable showRowCountSummary />
+          <KPITable 
+            key={refreshCounter}
+            data={kpiData.map((item: any) => ({
+              id: String(item.id ?? ''),
+              name: String(item.name ?? ''),
+              excellence: String(item.excellence ?? ''),
+              criteria: String(item.evaluation_criteria ?? ''),
+              level: item.area_level === 'อำเภอ' ? 'district' as const : 'province' as const,
+              department: String(item.ssj_department ?? ''),
+              result: null,
+              status: 'pending' as const,
+              target: typeof item.target_result === 'number' ? item.target_result : undefined,
+              lastUpdated: undefined,
+              isMophKpi: String(item.is_moph_kpi ?? '').toUpperCase() === 'YES',
+              divideNumber: typeof item.divide_number === 'number' ? item.divide_number : 
+                           typeof item.divide_number === 'string' ? parseFloat(item.divide_number) || undefined : undefined,
+            }))}
+            moneyYear={moneyYear}
+            refreshVersion={refreshVersion}
+            showHeaderSummary
+            showRowCountSummary 
+          />
         </div>
       </main>
     </div>

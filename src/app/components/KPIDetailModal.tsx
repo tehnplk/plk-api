@@ -368,6 +368,53 @@ export default function KPIDetailModal({
                               </td>
                             </tr>
                           ))}
+                          {/* Summary Row */}
+                          {selectedArea === 'ทั้งหมด' && districtData.length > 0 && (() => {
+                            const visibleData = [...districtData].sort((a, b) => {
+                              const aIndex = DISTRICTS.indexOf(a.area_name);
+                              const bIndex = DISTRICTS.indexOf(b.area_name);
+                              return aIndex - bIndex;
+                            });
+                            
+                            const totalTarget = visibleData.reduce((sum, d) => sum + (d.target || 0), 0);
+                            const monthlyTotals = MONTH_NAMES.map((_, monthIndex) => 
+                              visibleData.reduce((sum, d) => sum + (d.monthlyValues[monthIndex] || 0), 0)
+                            );
+                            const grandTotal = visibleData.reduce((sum, d) => sum + d.total, 0);
+                            const averageRate = visibleData.length > 0 
+                              ? Math.round((visibleData.reduce((sum, d) => sum + d.rate, 0) / visibleData.length) * 100) / 100
+                              : 0;
+                            
+                            return (
+                              <tr className="bg-gray-100 font-bold">
+                                <td className="px-2 py-2 text-gray-800 border border-gray-200 text-xs">
+                                  ผลรวม
+                                </td>
+                                <td className="px-2 py-2 text-center border border-gray-200 text-xs">
+                                  {totalTarget > 0 ? totalTarget : '-'}
+                                </td>
+                                {monthlyTotals.map((total, index) => (
+                                  <td key={index} className="px-2 py-2 text-center border border-gray-200 text-xs">
+                                    {total > 0 ? total : '-'}
+                                  </td>
+                                ))}
+                                <td className="px-2 py-2 text-center border border-gray-200 text-xs">
+                                  {grandTotal}
+                                </td>
+                                <td className="px-2 py-2 text-center border border-gray-200 text-xs">
+                                  <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-xs font-bold ${
+                                    averageRate >= 100 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : averageRate >= 80 
+                                        ? 'bg-yellow-100 text-yellow-800'
+                                        : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {averageRate}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })()}
                         </tbody>
                       </table>
                     </div>

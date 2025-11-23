@@ -3,11 +3,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { User, FileText, RefreshCw } from 'lucide-react';
+import { User, FileText, RefreshCw, Database } from 'lucide-react';
 import KPITable, { KPIItem as TableKPIItem } from '../components/KPITable';
 import ReportNavbar from './ReportNavbar';
 import ReportKpiModal from './ReportKpiModal';
-import { kpiCache } from '@/utils/kpiCache';
 import { toast } from 'react-toastify';
 import { DISTRICTS, DEFAULT_MONEY_YEAR } from '@/config/constants';
 
@@ -55,19 +54,47 @@ export default function ReportPage() {
   const [activeKpi, setActiveKpi] = useState<TableKPIItem | null>(null);
   const [gridData, setGridData] = useState<GridData>({});
   const [targetData, setTargetData] = useState<TargetData>({});
+  const [sumResultData, setSumResultData] = useState<TargetData>({});
+  const [rateData, setRateData] = useState<TargetData>({});
   const [moneyYear, setMoneyYear] = useState<number>(DEFAULT_MONEY_YEAR);
   const [saveVersion, setSaveVersion] = useState<number>(0);
   const [isDataLoading, setIsDataLoading] = useState<boolean>(false);
-  const [cacheAge, setCacheAge] = useState<number | null>(null);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
 
-  // Get cached KPI data in the right format for KPITable (memoized)
+  // Add state for KPI data
+  const [kpiData, setKpiData] = useState<any[]>([]);
+
+  // Load KPI data from database
+  const loadKpiData = async () => {
+    try {
+      console.log('Fetching KPI data from database...');
+      const res = await fetch('/api/kpis/db');
+      const json = await res.json();
+      
+      if (!json.success) {
+        throw new Error(json.message || 'Failed to fetch data');
+      }
+      
+      const rows = Array.isArray(json) ? json : json.data ?? [];
+      setKpiData(rows);
+      setLastSyncedAt(json.lastSyncedAt ? new Date(json.lastSyncedAt) : null);
+      console.log(`Loaded ${rows.length} KPI records from database`);
+      
+    } catch (error) {
+      console.error('Failed to fetch KPI data from database:', error);
+      toast.error('โหลดข้อมูลจากฐานข้อมูลล้มเหลว', {
+        position: "top-right",
+        autoClose: 5000,
+        theme: "colored",
+      });
+    }
+  };
+
+  // Get KPI data from database in the right format for KPITable (memoized)
   const cachedKpiData = useMemo(() => {
-    const cachedData = kpiCache.get();
-    if (!cachedData) return [];
-    
-    const rows = Array.isArray(cachedData) ? cachedData : cachedData.data ?? [];
-    return rows.map((item: any) => ({
+    return kpiData.map((item: any) => ({
       id: String(item.id ?? ''),
       name: String(item.name ?? ''),
       excellence: String(item.excellence ?? ''),
@@ -81,8 +108,12 @@ export default function ReportPage() {
       isMophKpi: String(item.is_moph_kpi ?? '').toUpperCase() === 'YES',
       divideNumber: typeof item.divide_number === 'number' ? item.divide_number : 
                    typeof item.divide_number === 'string' ? parseFloat(item.divide_number) || undefined : undefined,
+      condition: String(item.condition ?? ''),
+      sumResult: String(item.sum_result ?? ''),
+      ssjPm: String(item.ssj_pm ?? ''),
+      mophDepartment: String(item.moph_department ?? ''),
     }));
-  }, [saveVersion, refreshCounter]); // Re-calculate when saveVersion or refreshCounter changes
+  }, [kpiData, saveVersion, refreshCounter]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -120,58 +151,96 @@ export default function ReportPage() {
       });
 
     // Check cache age for display
-    if (kpiCache.isValid()) {
-      setCacheAge(kpiCache.getAge());
+    if (lastSyncedAt) {
+      console.log('Last synced at:', lastSyncedAt);
     }
+
+    // Load KPI data from database
+    loadKpiData();
   }, [router, status, session]);
 
   const handleRefreshKpis = async () => {
     try {
-      // Clear cache and reset data immediately
-      kpiCache.clear();
-      setCacheAge(null);
-      
-      console.log('Fetching fresh KPI data...');
-      const res = await fetch('/api/kpis');
+      console.log('Refreshing KPI data from database...');
+      const res = await fetch('/api/kpis/db');
       const json = await res.json();
+      
+      if (!json.success) {
+        throw new Error(json.message || 'Failed to refresh data');
+      }
+      
       const rows = Array.isArray(json) ? json : json.data ?? [];
+      setKpiData(rows);
+      setLastSyncedAt(json.lastSyncedAt ? new Date(json.lastSyncedAt) : null);
+      setRefreshCounter(prev => prev + 1);
       
-      console.log('API response:', json);
-      console.log('Parsed rows:', rows);
-      console.log('Rows length:', rows.length);
+      console.log('KPI data refreshed from database');
       
-      kpiCache.set(json);
-      setCacheAge(0);
-      setRefreshCounter(prev => prev + 1); // Force KPITable re-render
-      
-      console.log('KPI data refreshed and cached on report page');
-      
-      // Show success toast
       toast.success('รีเฟรชข้อมูลสำเร็จ', {
         position: "top-right",
         autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
         theme: "colored",
       });
     } catch (error) {
       console.error('Failed to refresh KPI data:', error);
-      
-      // Show error toast
       toast.error('รีเฟรชข้อมูลล้มเหลว กรุณาลองใหม่', {
         position: "top-right",
         autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
         theme: "colored",
       });
     }
+  };
+
+  const handleSyncKpis = async () => {
+    setIsSyncing(true);
+    
+    try {
+      console.log('Syncing KPI data from Google Sheets...');
+      const res = await fetch('/api/kpis/sync', { method: 'POST' });
+      const json = await res.json();
+      
+      if (!json.success) {
+        throw new Error(json.message || 'Failed to sync data');
+      }
+      
+      console.log('Sync completed, refreshing data...');
+      
+      // After sync, refresh data from database
+      await handleRefreshKpis();
+      
+      toast.success(`ซิงค์ข้อมูลสำเร็จ: ${json.count} รายการ`, {
+        position: "top-right",
+        autoClose: 3000,
+        theme: "colored",
+      });
+    } catch (error) {
+      console.error('Failed to sync KPI data:', error);
+      toast.error('ซิงค์ข้อมูลล้มเหลว กรุณาลองใหม่', {
+        position: "top-right",
+        autoClose: 5000,
+        theme: "colored",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Format last sync time for display
+  const formatLastSynced = (date: Date | null) => {
+    if (!date) return 'ยังไม่เคยซิงค์';
+    
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    
+    if (diffMins < 1) return 'เพิ่งซิงค์';
+    if (diffMins < 60) return `ซิงค์ ${diffMins} นาทีที่แล้ว`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `ซิงค์ ${diffHours} ชั่วโมงที่แล้ว`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    return `ซิงค์ ${diffDays} วันที่แล้ว`;
   };
 
   const yearShortPrev = ((moneyYear - 1) % 100).toString().padStart(2, '0');
@@ -201,17 +270,23 @@ export default function ReportPage() {
     // Initialize empty grid when a KPI is activated
     const initial: GridData = {};
     const targets: TargetData = {};
+    const sumResults: TargetData = {};
+    const rates: TargetData = {};
     const rowKeys = activeKpi.level === 'district' ? DISTRICTS : ['จังหวัด'];
 
     rowKeys.forEach((key) => {
       initial[key] = {};
       targets[key] = '';
+      sumResults[key] = '';
+      rates[key] = '';
       MONTHS.forEach((m) => {
         initial[key][m] = '';
       });
     });
     setGridData(initial);
     setTargetData(targets);
+    setSumResultData(sumResults);
+    setRateData(rates);
 
     // โหลดข้อมูลเดิมจาก SQLite (Prisma)
     const loadExisting = async () => {
@@ -243,6 +318,8 @@ export default function ReportPage() {
 
         const loadedGrid: GridData = { ...initial };
         const loadedTargets: TargetData = { ...targets };
+        const loadedSumResults: TargetData = {};
+        const loadedRates: TargetData = {};
 
         for (const row of json.data as any[]) {
           const area = row.area_name as string;
@@ -263,10 +340,22 @@ export default function ReportPage() {
               loadedGrid[area][MONTHS[i]] = '';
             }
           }
+
+          // Load sum_result and rate fields
+          if (row.sum_result != null && row.sum_result !== '') {
+            loadedSumResults[area] = String(row.sum_result);
+          }
+          
+          if (row.rate != null && !Number.isNaN(row.rate)) {
+            const r = Number(row.rate);
+            loadedRates[area] = r === 0 ? '' : String(r);
+          }
         }
 
         setGridData(loadedGrid);
         setTargetData(loadedTargets);
+        setSumResultData(loadedSumResults);
+        setRateData(loadedRates);
       } catch {
         // เงียบ error ไว้ ไม่ให้รบกวนผู้ใช้
       } finally {
@@ -289,6 +378,20 @@ export default function ReportPage() {
 
   const handleTargetChange = (district: string, value: string) => {
     setTargetData((prev) => ({
+      ...prev,
+      [district]: value,
+    }));
+  };
+
+  const handleSumResultChange = (district: string, value: string) => {
+    setSumResultData((prev) => ({
+      ...prev,
+      [district]: value,
+    }));
+  };
+
+  const handleRateChange = (district: string, value: string) => {
+    setRateData((prev) => ({
       ...prev,
       [district]: value,
     }));
@@ -397,12 +500,16 @@ export default function ReportPage() {
             </h2>
             <div className="flex items-center gap-4">
               <span className="text-xs text-gray-500">
-                {cacheAge !== null ? (
-                  cacheAge === 0 ? 'ข้อมูลล่าสุด' : `แคช ${Math.floor(cacheAge)} นาที`
-                ) : (
-                  kpiCache.isValid() ? 'แคชพร้อมใช้' : 'ไม่มีข้อมูลแคช'
-                )}
+                {formatLastSynced(lastSyncedAt)}
               </span>
+              <button 
+                onClick={handleSyncKpis}
+                disabled={isSyncing}
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                <Database size={16} className={isSyncing ? 'animate-pulse' : ''} />
+                ซิงค์จาก Google Sheets
+              </button>
               <button 
                 onClick={handleRefreshKpis}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2"
@@ -433,11 +540,15 @@ export default function ReportPage() {
           rowKeys={rowKeys}
           gridData={gridData}
           targetData={targetData}
+          sumResultData={sumResultData}
+          rateData={rateData}
           moneyYear={moneyYear}
           onClose={() => setActiveKpi(null)}
           onTargetChange={handleTargetChange}
           onCellChange={handleCellChange}
-          onSaved={() => setSaveVersion((v) => v + 1)}
+          onSumResultChange={handleSumResultChange}
+          onRateChange={handleRateChange}
+          onSaved={() => setSaveVersion((prev) => prev + 1)}
         />
       )}
     </div>

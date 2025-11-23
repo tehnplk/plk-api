@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FileText, Search, Save, TrendingUp } from 'lucide-react';
 import KPIDetailModal from './KPIDetailModal';
+import { getStatusFromCondition } from '@/utils/conditionEvaluator';
 
 type KPIStatus = 'pass' | 'fail' | 'pending';
 
@@ -19,6 +20,10 @@ export interface KPIItem {
   lastUpdated?: string;
   isMophKpi?: boolean;
   divideNumber?: number;
+  condition?: string;
+  sumResult?: string;
+  ssjPm?: string;
+  mophDepartment?: string;
 }
 
 const EXCELLENCE_DESCRIPTION: Record<string, string> = {
@@ -290,8 +295,13 @@ const KPITable: React.FC<KPITableProps> = ({
 
   const totalColumns = showActionColumn ? 9 : 8;
 
-  const getStatusBadge = (status: KPIStatus) => {
-    switch (status) {
+  const getStatusBadge = (kpi: KPIItem) => {
+    // Evaluate status based on condition if available
+    const evaluatedStatus = kpi.condition && kpi.target !== undefined && kpi.result !== null
+      ? getStatusFromCondition(kpi.condition, kpi.target, parseFloat(kpi.result || '0'))
+      : kpi.status;
+
+    switch (evaluatedStatus) {
       case 'pass':
         return (
           <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">

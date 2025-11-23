@@ -8,6 +8,8 @@ import type { KPIItem as TableKPIItem } from "../components/KPITable";
 // พิมพ์ซ้ำ type ให้ component นี้ใช้เอง (โครงสร้างตรงกับใน page.tsx)
 type GridData = Record<string, Record<string, string>>;
 type TargetData = Record<string, string>;
+type SumResultData = Record<string, string>;
+type RateData = Record<string, string>;
 
 interface ReportKpiModalProps {
   activeKpi: TableKPIItem;
@@ -15,10 +17,14 @@ interface ReportKpiModalProps {
   rowKeys: string[];
   gridData: GridData;
   targetData: TargetData;
+  sumResultData: SumResultData;
+  rateData: RateData;
   moneyYear: number;
   onClose: () => void;
   onTargetChange: (district: string, value: string) => void;
   onCellChange: (district: string, month: string, value: string) => void;
+  onSumResultChange: (district: string, value: string) => void;
+  onRateChange: (district: string, value: string) => void;
   onSaved?: () => void;
 }
 
@@ -28,10 +34,14 @@ export default function ReportKpiModal({
   rowKeys,
   gridData,
   targetData,
+  sumResultData,
+  rateData,
   moneyYear,
   onClose,
   onTargetChange,
   onCellChange,
+  onSumResultChange,
+  onRateChange,
   onSaved,
 }: ReportKpiModalProps) {
   const router = useRouter();
@@ -65,7 +75,7 @@ export default function ReportKpiModal({
     e.preventDefault();
 
     const maxRow = rowKeys.length - 1;
-    const maxCol = months.length; // col 0 = เป้า, 1..months.length = เดือน
+    const maxCol = months.length + 2; // col 0 = เป้า, 1..months.length = เดือน, months.length+1 = sum_result, months.length+2 = rate
 
     let nextRow = rowIndex;
     let nextCol = colIndex;
@@ -158,6 +168,16 @@ export default function ReportKpiModal({
     onCellChange(district, month, fixed.toString());
   };
 
+  // เปลี่ยนค่าในช่อง sum_result
+  const handleSumResultInputChange = (district: string, raw: string) => {
+    onSumResultChange(district, raw);
+  };
+
+  // เปลี่ยนค่าในช่อง rate
+  const handleRateInputChange = (district: string, raw: string) => {
+    onRateChange(district, raw);
+  };
+
   // ฟังก์ชันบันทึกข้อมูลลง Prisma SQLite
   const handleSave = async () => {
     setIsSaving(true);
@@ -173,6 +193,8 @@ export default function ReportKpiModal({
           kpiName: activeKpi.name,
           targetData,
           gridData,
+          sumResultData,
+          rateData,
           months,
           moneyYear,
         }),
@@ -379,19 +401,47 @@ export default function ReportKpiModal({
                       ))}
                       <td
                         className={
-                          "px-3 py-2 border-b text-right text-gray-700 font-semibold bg-gray-50" +
+                          "px-3 py-2 border-b text-center bg-gray-50" +
                           activeBorder
                         }
                       >
-                        {rowTotal.toLocaleString("th-TH")}
+                        <input
+                          type="text"
+                          className="w-full text-center text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-400"
+                          value={sumResultData[dist] ?? ""}
+                          onChange={(e) =>
+                            handleSumResultInputChange(dist, e.target.value)
+                          }
+                          data-cell-row={rowIndex}
+                          data-cell-col={months.length + 1}
+                          onFocus={() => setActiveRow(rowIndex)}
+                          onKeyDown={(e) =>
+                            handleArrowKey(e, rowIndex, months.length + 1)
+                          }
+                        />
                       </td>
                       <td
                         className={
-                          "px-3 py-2 border-b text-right text-gray-700 font-semibold bg-gray-50" +
+                          "px-3 py-2 border-b text-center bg-gray-50" +
                           activeBorder
                         }
                       >
-                        {rate ? rate.toFixed(2) : "-"}
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          className="w-full text-center text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-400"
+                          value={rateData[dist] ?? ""}
+                          onChange={(e) =>
+                            handleRateInputChange(dist, e.target.value)
+                          }
+                          data-cell-row={rowIndex}
+                          data-cell-col={months.length + 2}
+                          onFocus={() => setActiveRow(rowIndex)}
+                          onKeyDown={(e) =>
+                            handleArrowKey(e, rowIndex, months.length + 2)
+                          }
+                        />
                       </td>
                     </tr>
                   );

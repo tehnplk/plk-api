@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
       kpiName,
       targetData,
       gridData,
+      sumResultData,
+      rateData,
       months,
       moneyYear,
     } = body as {
@@ -32,6 +34,8 @@ export async function POST(request: NextRequest) {
       kpiName: string
       targetData: Record<string, string>
       gridData: Record<string, Record<string, string>>
+      sumResultData?: Record<string, string>
+      rateData?: Record<string, string>
       months: string[]
       moneyYear: number | string
     }
@@ -68,6 +72,12 @@ export async function POST(request: NextRequest) {
         const num = Number(raw)
         data[MONTH_FIELDS[i]] = Number.isFinite(num) ? num : null
       }
+
+      // Add sum_result and rate fields
+      data.sum_result = sumResultData?.[area_name] ?? null
+      const rateRaw = rateData?.[area_name] ?? ''
+      const rateNum = Number(rateRaw)
+      data.rate = Number.isFinite(rateNum) ? rateNum : null
 
       // ลบแถวเดิม (ถ้ามี) แล้วสร้างใหม่ตาม PK รวม
       await prisma.kpiReport.deleteMany({

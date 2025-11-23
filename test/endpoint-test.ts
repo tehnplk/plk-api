@@ -24,7 +24,7 @@ async function testGoogleAppsScriptEndpoint() {
     console.log('Success! Response:', data);
     
     // Write result to JSON file
-    const outputPath = join(__dirname, 'kpi-result.json');
+    const outputPath = join(__dirname, '..', 'test', 'kpi-result.json');
     writeFileSync(outputPath, JSON.stringify(data, null, 2), 'utf8');
     console.log('Result saved to:', outputPath);
     

@@ -9,6 +9,29 @@ datasource db {
   provider = "sqlite"
 }
 
+// ตารางเก็บข้อมูลตัวชี้วัดจาก Google Sheets API
+model Kpis {
+  id                String    @id
+  name              String
+  evaluation_criteria String
+  condition         String
+  target_result     Float
+  divide_number     Float
+  sum_result        String?
+  excellence        String
+  area_level        String
+  ssj_department    String
+  ssj_pm            String?
+  moph_department   String?
+  is_moph_kpi       String
+  last_synced_at    DateTime  @default(now())
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  @@index([ssj_department, area_level]) // สำหรับการกรองตามแผนกและพื้นที่
+  @@map("kpis")
+}
+
 // ตารางเก็บข้อมูลรายงาน KPI ตามปีงบประมาณ / พื้นที่ / ตัวชี้วัด
 model KpiReport {
   money_year Int    // ปีงบประมาณ (PK)
@@ -31,6 +54,9 @@ model KpiReport {
   result_jul Float?        // กรกฎาคม
   result_aug Float?        // สิงหาคม
   result_sep Float?        // กันยายน
+
+  sum_result String?        // ผลรวมผลงาน
+  rate        Float?        // อัตราผลงาน
 
   update_at  DateTime @updatedAt // วันที่อัปเดตล่าสุด
 

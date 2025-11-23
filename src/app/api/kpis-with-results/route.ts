@@ -77,7 +77,7 @@ export async function GET(request: Request) {
 
     // Group reports by KPI ID and area
     const reportsByKpiAndArea = new Map<string, any>();
-    reports.forEach(report => {
+    reports.forEach((report: any) => {
       const key = `${report.kpi_id}-${report.area_name}`;
       reportsByKpiAndArea.set(key, report);
     });

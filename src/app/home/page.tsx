@@ -141,11 +141,6 @@ export default function HomePage() {
   const [refreshVersion, setRefreshVersion] = useState(0);
   const { data: session } = useSession();
 
-  // Set document title
-  useEffect(() => {
-    document.title = 'ภาพรวม KPI จังหวัดพิษณุโลก';
-  }, []);
-
   const handleRefreshKpis = async () => {
     setIsKpiLoading(true);
     

@@ -56,11 +56,6 @@ export default function ReportPage() {
   const [targetData, setTargetData] = useState<TargetData>({});
   const [sumResultData, setSumResultData] = useState<TargetData>({});
   const [rateData, setRateData] = useState<TargetData>({});
-
-  // Set document title
-  useEffect(() => {
-    document.title = 'บันทึกข้อมูล KPI';
-  }, []);
   const [moneyYear, setMoneyYear] = useState<number>(DEFAULT_MONEY_YEAR);
   const [saveVersion, setSaveVersion] = useState<number>(0);
   const [isDataLoading, setIsDataLoading] = useState<boolean>(false);

@@ -44,11 +44,6 @@ export default function KPIDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [moneyYear, setMoneyYear] = useState<number>(2569);
 
-  // Set document title
-  useEffect(() => {
-    document.title = 'รายละเอียด KPI';
-  }, []);
-
   useEffect(() => {
     if (!kpiId) return;
 

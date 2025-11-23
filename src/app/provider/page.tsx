@@ -5,11 +5,6 @@ import { signInWithHealthId,} from '../actions/sign-in'
 import { useEffect } from 'react'
 
 export default function ProviderPage() {
-  // Set document title
-  useEffect(() => {
-    document.title = 'ทดสอบระบบ Login - Provider';
-  }, []);
-
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-full max-w-md">

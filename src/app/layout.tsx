@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ระบบรายงาน KPI",
-  description: "ระบบรายงานตัวชี้วัดประสิทธิภาพ จังหวัดพิษณุโลก",
+  title: 'PHS-KPI',
+  description: 'ระบบรายงานตัวชี้วัดประสิทธิภาพ จังหวัดพิษณุโลก',
 };
 
 export default function RootLayout({

@@ -137,11 +137,155 @@ export default function HomePage() {
   const [moneyYear, setMoneyYear] = useState<number>(DEFAULT_MONEY_YEAR);
   const [kpiData, setKpiData] = useState<any[]>([]);
   const [isKpiLoading, setIsKpiLoading] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const { data: session } = useSession();
+
+  const handleRefreshKpis = async () => {
+    setIsKpiLoading(true);
+    
+    try {
+      console.log('Refreshing KPI data from Google Sheets...');
+      const res = await fetch('/api/kpis/db');
+      const json = await res.json();
+      
+      if (!json.success) {
+        throw new Error(json.message || 'Failed to refresh data');
+      }
+      
+      const rows = Array.isArray(json.data) ? json.data : [];
+      setKpiData(rows);
+      setRefreshCounter(prev => prev + 1);
+      
+      // Update localStorage cache with fresh data
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('cachedKpiData', JSON.stringify(rows));
+        localStorage.setItem('cachedKpiTimestamp', Date.now().toString());
+      }
+      
+      console.log('KPI data refreshed from Google Sheets');
+      
+      toast.success('รีเฟรชข้อมูลสำเร็จ', {
+        position: "top-right",
+        autoClose: 3000,
+        theme: "colored",
+      });
+    } catch (error) {
+      console.error('Failed to refresh KPI data:', error);
+      toast.error('รีเฟรชข้อมูลล้มเหลว กรุณาลองใหม่', {
+        position: "top-right",
+        autoClose: 5000,
+        theme: "colored",
+      });
+    } finally {
+      setIsKpiLoading(false);
+    }
+  };
+
+  // Load KPI data from Google Sheets API
+  const loadKpiData = async () => {
+    setIsKpiLoading(true);
+    
+    try {
+      // Check if data exists in localStorage first
+      if (typeof window !== 'undefined') {
+        try {
+          const cachedData = localStorage.getItem('cachedKpiData');
+          const cachedTimestamp = localStorage.getItem('cachedKpiTimestamp');
+          
+          // Use cached data if less than 5 minutes old
+          if (cachedData && cachedTimestamp) {
+            const age = Date.now() - parseInt(cachedTimestamp);
+            if (age < 5 * 60 * 1000) { // 5 minutes
+              const parsedData = JSON.parse(cachedData);
+              setKpiData(parsedData);
+              console.log(`Loaded ${parsedData.length} KPI records from localStorage cache`);
+              setIsKpiLoading(false);
+              return;
+            }
+          }
+        } catch (localStorageError) {
+          console.warn('localStorage read failed, proceeding with API call:', localStorageError);
+        }
+      }
+      
+      console.log('Fetching KPI data from Google Sheets API...');
+      
+      // Add frontend timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('Frontend timeout triggered, aborting request...');
+        controller.abort();
+      }, 12000); // 12 second frontend timeout
+      
+      const res = await fetch('/api/kpis/db', {
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      const json = await res.json();
+      
+      if (!json.success) {
+        throw new Error(json.message || 'Failed to fetch data');
+      }
+      
+      const rows = Array.isArray(json.data) ? json.data : [];
+      setKpiData(rows);
+      
+      // Save to localStorage for future use
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('cachedKpiData', JSON.stringify(rows));
+          localStorage.setItem('cachedKpiTimestamp', Date.now().toString());
+        } catch (localStorageError) {
+          console.warn('localStorage write failed:', localStorageError);
+        }
+      }
+      
+      console.log(`Loaded ${rows.length} KPI records from Google Sheets`);
+      
+    } catch (error) {
+      console.error('Failed to fetch KPI data from Google Sheets:', error);
+      
+      // Fallback to expired cache if API fails
+      if (typeof window !== 'undefined') {
+        try {
+          const cachedData = localStorage.getItem('cachedKpiData');
+          if (cachedData) {
+            const parsedData = JSON.parse(cachedData);
+            setKpiData(parsedData);
+            console.log(`Using expired cache as fallback: ${parsedData.length} records`);
+            toast.warning('ใช้ข้อมูลเก่าจากแคช กรุณารีเฟรชเพื่อข้อมูลล่าสุด', {
+              position: "top-right",
+              autoClose: 5000,
+              theme: "colored",
+            });
+            setIsKpiLoading(false);
+            return;
+          }
+        } catch (fallbackError) {
+          console.warn('Fallback cache read failed:', fallbackError);
+        }
+      }
+      
+      let errorMessage = 'โหลดข้อมูลจาก Google Sheets ล้มเหลว';
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = 'การเชื่อมต่อหมดเวลา กรุณาลองใหม่';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+        theme: "colored",
+      });
+    } finally {
+      setIsKpiLoading(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -157,36 +301,7 @@ export default function HomePage() {
         // ignore errors, fall back to default
       });
 
-    // Load KPI data from database
-    const loadKpiData = async () => {
-      setIsKpiLoading(true);
-      
-      try {
-        console.log('Fetching KPI data from database...');
-        const res = await fetch('/api/kpis/db');
-        const json = await res.json();
-        
-        if (!json.success) {
-          throw new Error(json.message || 'Failed to fetch data');
-        }
-        
-        const rows = Array.isArray(json) ? json : json.data ?? [];
-        setKpiData(rows);
-        setLastSyncedAt(json.lastSyncedAt ? new Date(json.lastSyncedAt) : null);
-        console.log(`Loaded ${rows.length} KPI records from database`);
-        
-      } catch (error) {
-        console.error('Failed to fetch KPI data from database:', error);
-        toast.error('โหลดข้อมูลจากฐานข้อมูลล้มเหลว', {
-          position: "top-right",
-          autoClose: 5000,
-          theme: "colored",
-        });
-      } finally {
-        setIsKpiLoading(false);
-      }
-    };
-
+    // Load KPI data from Google Sheets API
     loadKpiData();
   }, []);
 
@@ -206,76 +321,6 @@ export default function HomePage() {
       }
     }
   }, [kpiData]);
-
-  const handleRefreshKpis = async () => {
-    setIsKpiLoading(true);
-    
-    try {
-      console.log('Refreshing KPI data from database...');
-      const res = await fetch('/api/kpis/db');
-      const json = await res.json();
-      
-      if (!json.success) {
-        throw new Error(json.message || 'Failed to refresh data');
-      }
-      
-      const rows = Array.isArray(json) ? json : json.data ?? [];
-      setKpiData(rows);
-      setLastSyncedAt(json.lastSyncedAt ? new Date(json.lastSyncedAt) : null);
-      setRefreshCounter(prev => prev + 1);
-      
-      console.log('KPI data refreshed from database');
-      
-      toast.success('รีเฟรชข้อมูลสำเร็จ', {
-        position: "top-right",
-        autoClose: 3000,
-        theme: "colored",
-      });
-    } catch (error) {
-      console.error('Failed to refresh KPI data:', error);
-      toast.error('รีเฟรชข้อมูลล้มเหลว กรุณาลองใหม่', {
-        position: "top-right",
-        autoClose: 5000,
-        theme: "colored",
-      });
-    } finally {
-      setIsKpiLoading(false);
-    }
-  };
-
-  const handleSyncKpis = async () => {
-    setIsSyncing(true);
-    
-    try {
-      console.log('Syncing KPI data from Google Sheets...');
-      const res = await fetch('/api/kpis/sync', { method: 'POST' });
-      const json = await res.json();
-      
-      if (!json.success) {
-        throw new Error(json.message || 'Failed to sync data');
-      }
-      
-      console.log('Sync completed, refreshing data...');
-      
-      // After sync, refresh data from database
-      await handleRefreshKpis();
-      
-      toast.success(`ซิงค์ข้อมูลสำเร็จ: ${json.count} รายการ`, {
-        position: "top-right",
-        autoClose: 3000,
-        theme: "colored",
-      });
-    } catch (error) {
-      console.error('Failed to sync KPI data:', error);
-      toast.error('ซิงค์ข้อมูลล้มเหลว กรุณาลองใหม่', {
-        position: "top-right",
-        autoClose: 5000,
-        theme: "colored",
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   // Format last sync time for display
   const formatLastSynced = (date: Date | null) => {
@@ -413,13 +458,26 @@ export default function HomePage() {
 
       <main className="container mx-auto px-4 py-6">
         <div className="space-y-6 animate-fade-in">
-          <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center gap-2">
-              <MapPin className="text-green-600" size={20} />
-              <span className="text-sm font-bold text-gray-700">พื้นที่รายงาน:</span>
-              <span className="text-xs text-gray-500 ml-2">
-                {formatLastSynced(lastSyncedAt)}
-              </span>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <Database size={24} className="text-green-600" />
+                รายการตัวชี้วัด KPI
+              </h2>
+              <div className="flex items-center gap-4 mt-2">
+                <p className="text-sm text-gray-600">
+                  ปีงบประมาณ {moneyYear}
+                </p>
+                <p className="text-sm text-gray-500">
+                  ข้อมูลจาก Google Sheets API
+                </p>
+                {isKpiLoading && (
+                  <div className="flex items-center gap-2 text-sm text-blue-600">
+                    <RefreshCw size={14} className="animate-spin" />
+                    กำลังโหลด...
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex gap-2">
               <select
@@ -436,14 +494,6 @@ export default function HomePage() {
               </select>
               <button className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm transition-colors">
                 แสดงผล
-              </button>
-              <button 
-                onClick={handleSyncKpis}
-                disabled={isSyncing}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                <Database size={16} className={isSyncing ? 'animate-pulse' : ''} />
-                ซิงค์จาก Google Sheets
               </button>
               <button 
                 onClick={handleRefreshKpis}

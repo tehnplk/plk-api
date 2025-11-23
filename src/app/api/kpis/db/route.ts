@@ -1,71 +1,130 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+
+const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbzKcomVEGs3E_JMkZpkJjwjzVjrbzNxyJD1byzhsAsRB8bGEM1qxUqVSZtHK0MOnVRfmg/exec';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Fetching KPI data from database...');
+    console.log('Fetching KPI data from Google Sheets API...');
     
     // Parse query parameters for filtering
     const { searchParams } = new URL(request.url);
     const department = searchParams.get('department');
     const level = searchParams.get('level'); // 'province' or 'district'
     
-    // Build where clause based on filters
-    const whereClause: any = {};
+    // Fetch data from Google Sheets API with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.log('Request timeout triggered, aborting fetch...');
+      controller.abort();
+    }, 10000); // Reduced to 10 second timeout
     
+    console.log('Making request to Google Sheets API...');
+    const upstreamUrl = `${ENDPOINT_URL}?sheet=kpi`;
+    
+    let response;
+    try {
+      response = await fetch(upstreamUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+      console.log('Fetch completed, status:', response.status);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        throw new Error('Request timed out. Google Sheets API may be slow or unavailable.');
+      }
+      throw fetchError;
+    }
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Google Sheets API rate limit exceeded. Please try again in a few minutes.');
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const apiData = await response.json();
+    console.log('API response received, processing data...');
+    
+    // Extract data array from response
+    const kpiData = Array.isArray(apiData) ? apiData : apiData.data ?? [];
+    
+    if (!Array.isArray(kpiData)) {
+      throw new Error('Invalid API response format');
+    }
+    
+    console.log(`Processing ${kpiData.length} KPI records...`);
+    
+    // Transform data to match expected format
+    let transformedData = kpiData.map((item: any) => ({
+      id: String(item.id ?? ''),
+      name: String(item.name ?? ''),
+      evaluation_criteria: String(item.evaluation_criteria ?? ''),
+      condition: String(item.condition ?? ''),
+      target_result: typeof item.target_result === 'number' ? item.target_result : 
+                    typeof item.target_result === 'string' ? parseFloat(item.target_result) || 0 : 0,
+      divide_number: typeof item.divide_number === 'number' ? item.divide_number : 
+                    typeof item.divide_number === 'string' ? parseFloat(item.divide_number) || 100 : 100,
+      sum_result: String(item.sum_result ?? ''),
+      excellence: String(item.excellence ?? ''),
+      area_level: String(item.area_level ?? ''),
+      ssj_department: String(item.ssj_department ?? ''),
+      ssj_pm: String(item.ssj_pm ?? ''),
+      moph_department: String(item.moph_department ?? ''),
+      is_moph_kpi: String(item.is_moph_kpi ?? ''),
+    }));
+    
+    // Apply filters if provided
     if (department && department.trim() !== '') {
-      whereClause.ssj_department = department.trim();
+      transformedData = transformedData.filter(item => 
+        item.ssj_department === department.trim()
+      );
     }
     
     if (level && level.trim() !== '') {
-      whereClause.area_level = level.trim() === 'province' ? 'จังหวัด' : 'อำเภอ';
+      transformedData = transformedData.filter(item => 
+        item.area_level === (level.trim() === 'province' ? 'จังหวัด' : 'อำเภอ')
+      );
     }
     
-    // Fetch data from database
-    const kpis = await prisma.kpis.findMany({
-      where: whereClause,
-      orderBy: [
-        { ssj_department: 'asc' },
-        { id: 'asc' }
-      ],
-    });
-    
-    console.log(`Found ${kpis.length} KPI records in database`);
-    
-    // Transform to match expected API response format
-    const transformedData = kpis.map((kpi) => ({
-      id: kpi.id,
-      name: kpi.name,
-      evaluation_criteria: kpi.evaluation_criteria,
-      condition: kpi.condition,
-      target_result: kpi.target_result,
-      divide_number: kpi.divide_number,
-      sum_result: kpi.sum_result,
-      excellence: kpi.excellence,
-      area_level: kpi.area_level,
-      ssj_department: kpi.ssj_department,
-      ssj_pm: kpi.ssj_pm,
-      moph_department: kpi.moph_department,
-      is_moph_kpi: kpi.is_moph_kpi,
-    }));
+    console.log(`Returning ${transformedData.length} filtered KPI records`);
     
     // Return in the same format as the original API
-    const response = {
+    const response_data = {
       success: true,
       data: transformedData,
       count: transformedData.length,
-      source: 'database',
-      lastSyncedAt: kpis.length > 0 ? kpis[0].last_synced_at : null,
+      source: 'google_sheets',
+      lastSyncedAt: new Date(),
     };
     
-    return NextResponse.json(response);
+    // Add caching headers
+    return NextResponse.json(response_data, {
+      headers: {
+        'Cache-Control': 'public, max-age=300, s-maxage=600', // 5 min client, 10 min CDN
+      },
+    });
     
   } catch (error) {
-    console.error('Failed to fetch KPI data from database:', error);
+    console.error('Failed to fetch KPI data from Google Sheets:', error);
+    
+    let errorMessage = 'Unknown error occurred';
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        errorMessage = 'Request timed out. Google Sheets API may be slow or unavailable.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
     
     return NextResponse.json({
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      message: errorMessage,
       error: String(error),
     }, { status: 500 });
   }

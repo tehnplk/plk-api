@@ -89,12 +89,17 @@ const authOptions: NextAuthConfig = {
         const cookieStore = await cookies();
         const department = cookieStore.get('selectedDepartment')?.value;
         
+        console.log('Debug JWT - department from cookie:', department);
+        console.log('Debug JWT - user object:', user);
+        
         if (department) {
           (token as any).ssj_department = department;
+          console.log('Debug JWT - set ssj_department:', department);
           // Clear the cookie after reading it
           cookieStore.delete('selectedDepartment');
         } else {
           (token as any).ssj_department = (user as any).ssj_department;
+          console.log('Debug JWT - using fallback ssj_department:', (user as any).ssj_department);
         }
       }
       return token;

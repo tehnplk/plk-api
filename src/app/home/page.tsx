@@ -475,9 +475,15 @@ export default function HomePage() {
 
   // Add ssj_department in parentheses if available
   const ssjDepartment = (session?.user as any)?.ssj_department;
+  console.log('Debug - session:', session);
+  console.log('Debug - ssjDepartment:', ssjDepartment);
+  console.log('Debug - displayName before:', displayName);
+  
   if (displayName && ssjDepartment) {
     displayName = `${displayName} (${ssjDepartment})`;
   }
+  
+  console.log('Debug - displayName after:', displayName);
 
   if (!mounted) {
     return null;

@@ -71,45 +71,53 @@ export default function KPIDetailPage() {
           console.warn('Failed to fetch KPI metadata:', err);
         }
 
-        // Then, fetch results from database
-        let databaseResults = [];
-        try {
-          const res = await fetch(`/api/kpi/save-prisma?kpiId=${kpiId}&moneyYear=${year}`);
-          if (res.ok) {
-            const json = await res.json();
-            if (json?.success && Array.isArray(json.data)) {
-              databaseResults = json.data;
-            }
+        // Mockup mode - no database fetching
+        const mockDatabaseResults = [
+          {
+            area_name: 'จังหวัด',
+            kpi_target: 85,
+            result_oct: 82,
+            result_nov: 84,
+            result_dec: 86,
+            result_jan: 83,
+            result_feb: 85,
+            result_mar: 87,
+            result_apr: 84,
+            result_may: 86,
+            result_jun: 85,
+            result_jul: 83,
+            result_aug: 84,
+            result_sep: 85,
+            sum_result: 85,
+            rate: 85.5
           }
-        } catch (err) {
-          console.warn('Failed to fetch database results:', err);
+        ];
+
+        // If we have no metadata, show error
+        if (!kpiMetadata) {
+          throw new Error('ไม่พบข้อมูล KPI นี้ในระบบ (Mockup)');
         }
 
-        // If we have no metadata and no database results, show error
-        if (!kpiMetadata && databaseResults.length === 0) {
-          throw new Error('ไม่พบข้อมูล KPI นี้ในระบบ');
-        }
-
-        // Set KPI details from metadata or database
-        const sourceData = kpiMetadata || (databaseResults[0] || {});
+        // Set KPI details from metadata
+        const sourceData = kpiMetadata || {};
         setKpiDetail({
           id: kpiId,
-          name: kpiMetadata?.name || sourceData.kpi_name || 'ไม่ทราบชื่อ',
-          criteria: kpiMetadata?.evaluation_criteria || sourceData.criteria || '-',
+          name: kpiMetadata?.name || 'ตัวชี้วัดตัวอย่าง (Mockup)',
+          criteria: kpiMetadata?.evaluation_criteria || 'เกณฑ์การประเมินตัวอย่าง',
           level: kpiMetadata?.area_level === 'อำเภอ' ? 'อำเภอ' : 'จังหวัด',
-          department: kpiMetadata?.ssj_department || sourceData.area_name || 'ไม่ทราบ',
-          target: kpiMetadata?.target_result || sourceData.kpi_tarket || null,
-          divideNumber: kpiMetadata?.divide_number || sourceData.divide_number || null,
-          lastUpdated: databaseResults[0]?.updated_at || null,
+          department: kpiMetadata?.ssj_department || 'ไม่ทราบ',
+          target: kpiMetadata?.target_result || null,
+          divideNumber: kpiMetadata?.divide_number || null,
+          lastUpdated: new Date().toISOString(),
         });
 
         // Prepare monthly data for chart and district data for table
         let chartData: MonthlyData[] = [];
         let districtTableData: DistrictData[] = [];
         
-        if (databaseResults.length > 0) {
+        if (mockDatabaseResults.length > 0) {
           // Process district data for table
-          districtTableData = databaseResults.map((record: any) => {
+          districtTableData = mockDatabaseResults.map((record: any) => {
             const monthlyValues = MONTH_FIELDS.map(field => 
               record[field] !== null && record[field] !== undefined 
                 ? Number(record[field]) 
@@ -138,7 +146,7 @@ export default function KPIDetailPage() {
 
           // Create aggregated chart data (sum of all districts)
           chartData = MONTH_NAMES.map((month, index) => {
-            const monthlySum = databaseResults.reduce((sum: number, record: any) => {
+            const monthlySum = mockDatabaseResults.reduce((sum: number, record: any) => {
               const value = record[MONTH_FIELDS[index]];
               return sum + (value !== null && value !== undefined ? Number(value) : 0);
             }, 0);

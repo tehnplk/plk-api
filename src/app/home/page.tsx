@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import {
   PieChart,
@@ -20,7 +20,9 @@ import {
 import { FileText, CheckCircle, XCircle, AlertCircle, MapPin, Target, Activity, RefreshCw, Database } from 'lucide-react';
 import KPITable from '../components/KPITable';
 import HomeNavbar from './HomeNavbar';
+import ReportKpiModal from '../components/ReportKpiModal';
 import { toast } from 'react-toastify';
+import { kpiDataCache, transformKpiData } from '../../utils/kpiDataCache';
 
 const THEME = {
   primary: '#00A651',
@@ -141,178 +143,71 @@ export default function HomePage() {
   const [refreshVersion, setRefreshVersion] = useState(0);
   const { data: session } = useSession();
 
-  const handleRefreshKpis = async () => {
-    setIsKpiLoading(true);
-    
-    try {
-      console.log('Refreshing KPI data from Google Sheets...');
-      const res = await fetch('/api/kpis/db');
-      const json = await res.json();
-      
-      if (!json.success) {
-        throw new Error(json.message || 'Failed to refresh data');
-      }
-      
-      const rows = Array.isArray(json.data) ? json.data : [];
-      setKpiData(rows);
-      setRefreshCounter(prev => prev + 1);
-      
-      // Update localStorage cache with fresh data
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('cachedKpiData', JSON.stringify(rows));
-        localStorage.setItem('cachedKpiTimestamp', Date.now().toString());
-      }
-      
-      console.log('KPI data refreshed from Google Sheets');
-      
-      toast.success('รีเฟรชข้อมูลสำเร็จ', {
-        position: "top-right",
-        autoClose: 3000,
-        theme: "colored",
-      });
-    } catch (error) {
-      console.error('Failed to refresh KPI data:', error);
-      
-      // Try to restore from cache if API fails
-      if (typeof window !== 'undefined') {
-        try {
-          const cachedData = localStorage.getItem('cachedKpiData');
-          if (cachedData) {
-            const parsedData = JSON.parse(cachedData);
-            setKpiData(parsedData);
-            console.log(`Using cache as fallback after refresh failed: ${parsedData.length} records`);
-            toast.warning('ใช้ข้อมูลเก่าจากแคช กรุณารีเฟรชเพื่อข้อมูลล่าสุด', {
-              position: "top-right",
-              autoClose: 5000,
-              theme: "colored",
-            });
-          } else {
-            toast.error('รีเฟรชข้อมูลล้มเหลว ไม่มีข้อมูลสำรอง', {
-              position: "top-right",
-              autoClose: 5000,
-              theme: "colored",
-            });
-          }
-        } catch (fallbackError) {
-          console.warn('Fallback cache read failed:', fallbackError);
-          toast.error('รีเฟรชข้อมูลล้มเหลว กรุณาลองใหม่', {
-            position: "top-right",
-            autoClose: 5000,
-            theme: "colored",
-          });
-        }
-      } else {
-        toast.error('รีเฟรชข้อมูลล้มเหลว กรุณาลองใหม่', {
-          position: "top-right",
-          autoClose: 5000,
-          theme: "colored",
-        });
-      }
-    } finally {
-      setIsKpiLoading(false);
+  // Department filtering state
+  const [selectedDepartment, setSelectedDepartment] = useState('ทั้งหมด');
+
+  // Extract unique departments and filter data from cache
+  const departmentOptions = useMemo(() => {
+    // Get data directly from cache for distinct departments
+    const cacheData = kpiDataCache.getCachedData();
+    const departments = Array.from(new Set(
+      (cacheData || kpiData).map(item => item.ssj_department).filter(Boolean)
+    ));
+    return departments.sort();
+  }, [kpiData]);
+
+  const filteredKpiData = useMemo(() => {
+    if (selectedDepartment === 'ทั้งหมด') {
+      return kpiData;
     }
+    return kpiData.filter(item => item.ssj_department === selectedDepartment);
+  }, [kpiData, selectedDepartment]);
+
+  // Add state for modal functionality
+  const [activeKpi, setActiveKpi] = useState<any>(null);
+  const [gridData, setGridData] = useState<Record<string, Record<string, string>>>({});
+  const [targetData, setTargetData] = useState<Record<string, string>>({});
+  const [sumResultData, setSumResultData] = useState<Record<string, string>>({});
+  const [rateData, setRateData] = useState<Record<string, string>>({});
+  const [saveVersion, setSaveVersion] = useState<number>(0);
+  const [isDataLoading, setIsDataLoading] = useState<boolean>(false);
+
+  const handleRefreshKpis = async () => {
+    await loadKpiData(true); // Force refresh
   };
 
-  // Load KPI data from Google Sheets API
-  const loadKpiData = async () => {
+  const loadKpiData = async (forceRefresh: boolean = false) => {
     setIsKpiLoading(true);
     
     try {
-      // Check if data exists in localStorage first
-      if (typeof window !== 'undefined') {
-        try {
-          const cachedData = localStorage.getItem('cachedKpiData');
-          const cachedTimestamp = localStorage.getItem('cachedKpiTimestamp');
-          
-          // Use cached data if less than 5 minutes old
-          if (cachedData && cachedTimestamp) {
-            const age = Date.now() - parseInt(cachedTimestamp);
-            if (age < 5 * 60 * 1000) { // 5 minutes
-              const parsedData = JSON.parse(cachedData);
-              setKpiData(parsedData);
-              console.log(`Loaded ${parsedData.length} KPI records from localStorage cache`);
-              setIsKpiLoading(false);
-              return;
-            }
-          }
-        } catch (localStorageError) {
-          console.warn('localStorage read failed, proceeding with API call:', localStorageError);
-        }
+      const data = await kpiDataCache.loadData(forceRefresh);
+      setKpiData(data);
+      setRefreshCounter(prev => prev + 1);
+      
+      if (forceRefresh) {
+        console.log('KPI data refreshed from Google Sheets');
+        toast.success('ข้อมูล KPI อัปเดตเรียบร้อย', {
+          position: "top-right",
+          autoClose: 3000,
+        });
       }
-      
-      console.log('Fetching KPI data from Google Sheets API...');
-      
-      // Add frontend timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log('Frontend timeout triggered, aborting request...');
-        controller.abort();
-      }, 12000); // 12 second frontend timeout
-      
-      const res = await fetch('/api/kpis/db', {
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      const json = await res.json();
-      
-      if (!json.success) {
-        throw new Error(json.message || 'Failed to fetch data');
-      }
-      
-      const rows = Array.isArray(json.data) ? json.data : [];
-      setKpiData(rows);
-      
-      // Save to localStorage for future use
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('cachedKpiData', JSON.stringify(rows));
-          localStorage.setItem('cachedKpiTimestamp', Date.now().toString());
-        } catch (localStorageError) {
-          console.warn('localStorage write failed:', localStorageError);
-        }
-      }
-      
-      console.log(`Loaded ${rows.length} KPI records from Google Sheets`);
-      
     } catch (error) {
-      console.error('Failed to fetch KPI data from Google Sheets:', error);
+      console.error('Failed to load KPI data:', error);
       
-      // Fallback to expired cache if API fails
-      if (typeof window !== 'undefined') {
-        try {
-          const cachedData = localStorage.getItem('cachedKpiData');
-          if (cachedData) {
-            const parsedData = JSON.parse(cachedData);
-            setKpiData(parsedData);
-            console.log(`Using expired cache as fallback: ${parsedData.length} records`);
-            toast.warning('ใช้ข้อมูลเก่าจากแคช กรุณารีเฟรชเพื่อข้อมูลล่าสุด', {
-              position: "top-right",
-              autoClose: 5000,
-              theme: "colored",
-            });
-            setIsKpiLoading(false);
-            return;
-          }
-        } catch (fallbackError) {
-          console.warn('Fallback cache read failed:', fallbackError);
-        }
+      // Try to get any cached data as fallback
+      const fallbackData = kpiDataCache.getCachedData();
+      if (fallbackData) {
+        setKpiData(fallbackData);
+        toast.warning('ใช้ข้อมูลเก่าจากแคช กรุณารีเฟรชเพื่อข้อมูลล่าสุด', {
+          position: "top-right",
+          autoClose: 5000,
+        });
+      } else {
+        toast.error('ไม่สามารถโหลดข้อมูล KPI ได้ กรุณาลองใหม่', {
+          position: "top-right",
+          autoClose: 5000,
+        });
       }
-      
-      let errorMessage = 'โหลดข้อมูลจาก Google Sheets ล้มเหลว';
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          errorMessage = 'การเชื่อมต่อหมดเวลา กรุณาลองใหม่';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      toast.error(errorMessage, {
-        position: "top-right",
-        autoClose: 5000,
-        theme: "colored",
-      });
     } finally {
       setIsKpiLoading(false);
     }
@@ -352,6 +247,61 @@ export default function HomePage() {
       }
     }
   }, [kpiData]);
+
+  // Modal data loading logic
+  useEffect(() => {
+    if (!activeKpi) {
+      setGridData({});
+      setTargetData({});
+      setSumResultData({});
+      setRateData({});
+      return;
+    }
+
+    // Initialize empty grid when a KPI is activated
+    const initial: Record<string, Record<string, string>> = {};
+    const targets: Record<string, string> = {};
+    const sumResults: Record<string, string> = {};
+    const rates: Record<string, string> = {};
+    const rowKeys = activeKpi.level === 'district' ? DISTRICTS : ['จังหวัด'];
+
+    rowKeys.forEach((key) => {
+      initial[key] = {};
+      targets[key] = '';
+      sumResults[key] = '';
+      rates[key] = '';
+      MONTHS.forEach((m) => {
+        initial[key][m] = '';
+      });
+    });
+    setGridData(initial);
+    setTargetData(targets);
+    setSumResultData(sumResults);
+    setRateData(rates);
+
+    // Mockup mode - no database loading
+    setIsDataLoading(false);
+  }, [activeKpi, moneyYear]);
+
+  // Modal change handlers
+  const handleTargetChange = (district: string, value: string) => {
+    setTargetData(prev => ({ ...prev, [district]: value }));
+  };
+
+  const handleCellChange = (district: string, month: string, value: string) => {
+    setGridData(prev => ({
+      ...prev,
+      [district]: { ...prev[district], [month]: value }
+    }));
+  };
+
+  const handleSumResultChange = (district: string, value: string) => {
+    setSumResultData(prev => ({ ...prev, [district]: value }));
+  };
+
+  const handleRateChange = (district: string, value: string) => {
+    setRateData(prev => ({ ...prev, [district]: value }));
+  };
 
   // Format last sync time for display
   const formatLastSynced = (date: Date | null) => {
@@ -485,55 +435,58 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen font-sans" style={{ backgroundColor: '#F0FDF4' }}>
-      <HomeNavbar moneyYear={moneyYear} session={session} displayName={displayName} />
+      <HomeNavbar 
+        moneyYear={moneyYear} 
+        session={session} 
+        displayName={displayName}
+        onRefresh={handleRefreshKpis}
+        showRefreshButton={true}
+        isRefreshing={isKpiLoading}
+        selectedDistrict={selectedDistrictScope}
+        onDistrictChange={setSelectedDistrictScope}
+        districtOptions={DISTRICTS}
+      />
 
       <main className="container mx-auto px-4 py-6">
         <div className="space-y-6 animate-fade-in">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <Database size={24} className="text-green-600" />
-                รายการตัวชี้วัด KPI
-              </h2>
-              <div className="flex items-center gap-4 mt-2">
-                <p className="text-sm text-gray-600">
-                  ปีงบประมาณ {moneyYear}
-                </p>
-                <p className="text-sm text-gray-500">
-                  ข้อมูลจาก Google Sheets API
-                </p>
-                {isKpiLoading && (
-                  <div className="flex items-center gap-2 text-sm text-blue-600">
-                    <RefreshCw size={14} className="animate-spin" />
-                    กำลังโหลด...
-                  </div>
-                )}
+            <div className="flex items-center gap-4">
+              {/* Department Selector */}
+              {departmentOptions.length > 0 && (
+                <select
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                  value={selectedDepartment || 'ทั้งหมด'}
+                  onChange={(e) => setSelectedDepartment(e.target.value)}
+                >
+                  <option value="ทั้งหมด">กลุ่มงานทั้งหมด</option>
+                  {departmentOptions.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+              )}
+              
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                  <Database size={24} className="text-green-600" />
+                  รายการตัวชี้วัด KPI
+                </h2>
+                <div className="flex items-center gap-4 mt-2">
+                  <p className="text-sm text-gray-600">
+                    ปีงบประมาณ {moneyYear}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    ข้อมูลจาก Google Sheets API
+                  </p>
+                  {isKpiLoading && (
+                    <div className="flex items-center gap-2 text-sm text-blue-600">
+                      <RefreshCw size={14} className="animate-spin" />
+                      กำลังโหลด...
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="flex gap-2">
-              <select
-                className="px-4 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
-                value={selectedDistrictScope}
-                onChange={(e) => setSelectedDistrictScope(e.target.value)}
-              >
-                <option value="ALL">ภาพรวมจังหวัด (ทุกอำเภอ)</option>
-                {DISTRICTS.map((d) => (
-                  <option key={d} value={d}>
-                    อำเภอ{d}
-                  </option>
-                ))}
-              </select>
-              <button className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm transition-colors">
-                แสดงผล
-              </button>
-              <button 
-                onClick={handleRefreshKpis}
-                disabled={isKpiLoading}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                <RefreshCw size={16} className={isKpiLoading ? 'animate-spin' : ''} />
-                รีเฟรชข้อมูล
-              </button>
             </div>
           </div>
 
@@ -719,16 +672,17 @@ export default function HomePage() {
             </div>
           </div>
 
+          <div id="kpi-table-section">
           <KPITable 
             key={refreshCounter}
-            data={kpiData.map((item: any) => ({
+            data={filteredKpiData.map((item: any) => ({
               id: String(item.id ?? ''),
               name: String(item.name ?? ''),
               excellence: String(item.excellence ?? ''),
               criteria: String(item.evaluation_criteria ?? ''),
               level: item.area_level === 'อำเภอ' ? 'district' as const : 'province' as const,
               department: String(item.ssj_department ?? ''),
-              result: null,
+              result: item.sum_result != null ? String(item.sum_result) : null, // ดึงจาก sum_result ใน google sheet (รวมค่า 0)
               status: 'pending' as const,
               target: typeof item.target_result === 'number' ? item.target_result : undefined,
               lastUpdated: undefined,
@@ -744,9 +698,34 @@ export default function HomePage() {
             refreshVersion={refreshVersion}
             showHeaderSummary
             showRowCountSummary 
+            disableDatabaseFetch={true} // ไม่ต้องดึงข้อมูลจาก database ผ่าน prisma
+            showActionColumn={session ? true : false} // แสดง action column เมื่อ auth ผ่านแล้ว
+            onActionClick={(kpi) => setActiveKpi(kpi)} // เปิด modal เมื่อคลิกปุ่มบันทึก
           />
+          </div>
         </div>
       </main>
+      {activeKpi && (
+        <ReportKpiModal
+          activeKpi={activeKpi}
+          months={MONTHS}
+          rowKeys={activeKpi.level === 'district' ? DISTRICTS : ['จังหวัด']}
+          gridData={gridData}
+          targetData={targetData}
+          sumResultData={sumResultData}
+          rateData={rateData}
+          moneyYear={moneyYear}
+          onClose={() => setActiveKpi(null)}
+          onTargetChange={handleTargetChange}
+          onCellChange={handleCellChange}
+          onSumResultChange={handleSumResultChange}
+          onRateChange={handleRateChange}
+          onSaved={() => {
+            setSaveVersion(prev => prev + 1);
+            setActiveKpi(null);
+          }}
+        />
+      )}
     </div>
   );
 }

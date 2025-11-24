@@ -1,7 +1,12 @@
 // Test file to call the Google Apps Script endpoint
 import { writeFileSync } from 'fs';
 import { join } from 'path';
-const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbzKcomVEGs3E_JMkZpkJjwjzVjrbzNxyJD1byzhsAsRB8bGEM1qxUqVSZtHK0MOnVRfmg/exec';
+import { config } from 'dotenv';
+
+// Load environment variables from .env.local
+config({ path: '.env.local' });
+
+const ENDPOINT_URL = process.env.ENDPOINT_URL || 'https://script.google.com/macros/s/AKfycbzKcomVEGs3E_JMkZpkJjwjzVjrbzNxyJD1byzhsAsRB8bGEM1qxUqVSZtHK0MOnVRfmg/exec';
 
 async function testGoogleAppsScriptEndpoint() {
   try {

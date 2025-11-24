@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileText, Search, Save, TrendingUp } from 'lucide-react';
+import { FileText, Search, Save, TrendingUp, RotateCcw } from 'lucide-react';
 import KPIDetailModal from './KPIDetailModal';
 import { getStatusFromCondition } from '@/utils/conditionEvaluator';
 
@@ -45,6 +45,7 @@ interface KPITableProps {
   moneyYear?: number;
   refreshVersion?: number;
   isLoading?: boolean;
+  disableDatabaseFetch?: boolean; // New prop to disable Prisma database fetching
 }
 
 const KPITable: React.FC<KPITableProps> = ({
@@ -58,6 +59,7 @@ const KPITable: React.FC<KPITableProps> = ({
   moneyYear = 2569,
   refreshVersion,
   isLoading,
+  disableDatabaseFetch = false, // Default to false for backward compatibility
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState(initialDepartment || 'ทั้งหมด');
@@ -71,6 +73,31 @@ const KPITable: React.FC<KPITableProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<'id' | 'name' | 'criteria' | 'level' | 'department'>('id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Clear all filters and scroll to KPI table section
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setSelectedDepartment(initialDepartment || 'ทั้งหมด');
+    setSelectedStatus('ทั้งหมด');
+    setSelectedLevel('ทั้งหมด');
+    setShowMophOnly(false);
+    
+    // Use requestAnimationFrame to ensure scroll happens after DOM updates
+    requestAnimationFrame(() => {
+      // Scroll to KPI table section
+      const element = document.getElementById('kpi-table-section');
+      if (element) {
+        const navbarHeight = 64; // Height of sticky navbar (h-16 = 64px)
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - navbarHeight;
+        
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    });
+  };
   const [kpiSummary, setKpiSummary] = useState<
     Record<string, { rate: string | null; lastUpdated: string | null }>
   >({});
@@ -148,7 +175,7 @@ const KPITable: React.FC<KPITableProps> = ({
   const sourceData: KPIItem[] = data && data.length > 0 ? data : remoteData || [];
 
   useEffect(() => {
-    if (!moneyYear || sourceData.length === 0) return;
+    if (!moneyYear || sourceData.length === 0 || disableDatabaseFetch) return;
 
     let cancelled = false;
 
@@ -170,60 +197,54 @@ const KPITable: React.FC<KPITableProps> = ({
     const fetchSummary = async () => {
       const result: Record<string, { rate: string | null; lastUpdated: string | null }> = {};
 
-      for (const item of sourceData) {
-        try {
-          const params = new URLSearchParams({
-            kpiId: item.id,
-            moneyYear: String(moneyYear),
-          });
-          const res = await fetch(`/api/kpi/save-prisma?${params.toString()}`);
-          if (!res.ok) continue;
-          const json = await res.json();
-          if (!json?.success || !Array.isArray(json.data) || json.data.length === 0) continue;
+      try {
+        // Use batch endpoint to fetch all KPI summaries at once
+        const kpiIds = sourceData.map(item => item.id);
+        const res = await fetch('/api/kpis/summaries', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            kpiIds,
+            moneyYear,
+          }),
+        });
 
-          let targetTotal = 0;
-          let grandTotal = 0;
-          let lastUpdated: Date | null = null;
-
-          for (const row of json.data as any[]) {
-            const t = Number(row.kpi_target ?? 0);
-            if (!Number.isNaN(t)) targetTotal += t;
-
-            for (const field of monthFields) {
-              const v = Number(row[field] ?? 0);
-              if (!Number.isNaN(v)) grandTotal += v;
-            }
-
-            if (row.update_at) {
-              const d = new Date(row.update_at as string);
-              if (!Number.isNaN(d.getTime())) {
-                if (!lastUpdated || d > lastUpdated) {
-                  lastUpdated = d;
-                }
-              }
-            }
-          }
-
-          const divideNumber = item.divideNumber ?? 1;
-          let rate: string | null = null;
-          if (targetTotal > 0) {
-            const r = (grandTotal / targetTotal) * (divideNumber || 1);
-            rate = r.toFixed(2);
-          }
-
-          result[item.id] = {
-            rate,
-            lastUpdated: lastUpdated
-              ? lastUpdated.toLocaleDateString('th-TH', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                })
-              : null,
-          };
-        } catch {
-          // ignore per-KPI errors
+        if (!res.ok) {
+          console.error('Failed to fetch KPI summaries:', res.statusText);
+          return;
         }
+
+        const summaries = await res.json();
+        
+        if (!Array.isArray(summaries)) {
+          console.error('Invalid response format from batch endpoint');
+          return;
+        }
+
+        // Process the batch results
+        for (const summary of summaries) {
+          if (summary.error) {
+            console.error(`Error fetching summary for KPI ${summary.kpiId}:`, summary.error);
+            continue;
+          }
+
+          if (summary.data) {
+            result[summary.kpiId] = {
+              rate: summary.data.rate ? summary.data.rate.toFixed(2) : null,
+              lastUpdated: summary.data.lastUpdated
+                ? new Date(summary.data.lastUpdated).toLocaleDateString('th-TH', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                  })
+                : null,
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching KPI summaries:', error);
       }
 
       if (!cancelled) {
@@ -361,25 +382,6 @@ const KPITable: React.FC<KPITableProps> = ({
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <select
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value as 'ทั้งหมด' | KPIStatus)}
-          >
-            <option value="ทั้งหมด">สถานะทั้งหมด</option>
-            <option value="pass">ผ่านเกณฑ์</option>
-            <option value="fail">ไม่ผ่านเกณฑ์</option>
-            <option value="pending">รอประเมิน</option>
-          </select>
-          <select
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            value={selectedLevel}
-            onChange={(e) => setSelectedLevel(e.target.value as 'ทั้งหมด' | 'province' | 'district')}
-          >
-            <option value="ทั้งหมด">ประเภทตัวชี้วัดทั้งหมด</option>
-            <option value="province">ตัวชี้วัดจังหวัด</option>
-            <option value="district">ตัวชี้วัดอำเภอ</option>
-          </select>
           {!hideDepartmentFilter && (
             <select
               className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -394,6 +396,33 @@ const KPITable: React.FC<KPITableProps> = ({
               ))}
             </select>
           )}
+          <select
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={selectedLevel}
+            onChange={(e) => setSelectedLevel(e.target.value as 'ทั้งหมด' | 'province' | 'district')}
+          >
+            <option value="ทั้งหมด">ประเภทตัวชี้วัดทั้งหมด</option>
+            <option value="province">ตัวชี้วัดจังหวัด</option>
+            <option value="district">ตัวชี้วัดอำเภอ</option>
+          </select>
+          <select
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value as 'ทั้งหมด' | KPIStatus)}
+          >
+            <option value="ทั้งหมด">สถานะทั้งหมด</option>
+            <option value="pass">ผ่านเกณฑ์</option>
+            <option value="fail">ไม่ผ่านเกณฑ์</option>
+            <option value="pending">รอประเมิน</option>
+          </select>
+          <button
+            onClick={handleClearFilters}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 hover:bg-gray-100 flex items-center gap-2 text-gray-700"
+            title="ล้างตัวกรองทั้งหมด"
+          >
+            <RotateCcw size={14} />
+            ล้างตัวกรอง
+          </button>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -532,8 +561,12 @@ const KPITable: React.FC<KPITableProps> = ({
                     {kpi.criteria}
                   </td>
                   <td className="px-6 py-4 text-center">
-                    {kpiSummary[kpi.id]?.rate ? (
+                    {kpi.result && kpi.result !== '0' ? (
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                        {kpi.result}
+                      </span>
+                    ) : kpiSummary[kpi.id]?.rate ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800 border border-green-200">
                         {kpiSummary[kpi.id]?.rate}
                       </span>
                     ) : (

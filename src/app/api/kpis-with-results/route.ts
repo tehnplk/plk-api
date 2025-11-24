@@ -112,7 +112,10 @@ export async function GET(request: Request) {
             }, {} as any)
           });
           
-          const status = calculateStatus(aggregateRate, kpi.target_result);
+          const target = typeof kpi.target_result === 'number' 
+            ? kpi.target_result 
+            : Number(kpi.target_result);
+          const status = calculateStatus(aggregateRate, Number.isFinite(target) ? target : null);
           
           return {
             ...kpi,

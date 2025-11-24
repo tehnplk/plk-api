@@ -15,9 +15,9 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // ถ้า login แล้ว ให้ redirect ไป /report ทันที
+    // ถ้า login แล้ว ให้ redirect ไป /home ทันที
     if (status === 'authenticated') {
-      router.replace('/report');
+      router.replace('/home');
       return;
     }
 

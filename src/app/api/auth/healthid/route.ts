@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
         return NextResponse.json({ error: data.error || 'Failed to fetch Health ID token' }, { status: response.status });
     }
-    console.log("Health ID Data:", data);
+    // Removed sensitive data logging for security
 
 
     const userResponse = await fetch('https://provider.id.th/api/v1/services/token', {
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         })
     });
     const userData = await userResponse.json();
-    console.log("Provider Data:", userData);
+    // Removed sensitive data logging for security
     if (!userResponse.ok) {
         return NextResponse.json({ error: userData.error || 'Failed to fetch provider data' }, { status: userResponse.status });
     }
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     });
     const profileData = await profileResponse.json();
-    console.log("Profile Data ", profileData, typeof profileData);
+    // Removed sensitive data logging for security
     if (!profileResponse.ok) {
         return NextResponse.json({ error: profileData.error || 'Failed to fetch profile data' }, { status: profileResponse.status });
     }
@@ -67,9 +67,10 @@ export async function GET(request: NextRequest) {
     const res = await signIn('credentials', {
         'cred-way': 'health-id',
         'profile': JSON.stringify(profileData.data),
-        redirectTo: "/report"
+        redirectTo: "/home"
     });
     console.log("res sign in = ", res);
-
-    //redirect('/profile');
+    
+    // Return the signIn result to ensure proper route handler response
+    return res;
 }

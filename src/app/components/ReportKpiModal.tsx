@@ -178,45 +178,28 @@ export default function ReportKpiModal({
     onRateChange(district, raw);
   };
 
-  // ฟังก์ชันบันทึกข้อมูลลง Prisma SQLite
+  // ฟังก์ชันบันทึกข้อมูล (Mockup - ไม่ติดต่อ Database)
   const handleSave = async () => {
     setIsSaving(true);
     
     try {
-      const response = await fetch('/api/kpi/save-prisma', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          kpiId: activeKpi.id,
-          kpiName: activeKpi.name,
-          targetData,
-          gridData,
-          sumResultData,
-          rateData,
-          months,
-          moneyYear,
-        }),
-      });
-
-      const result = await response.json();
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (result.success) {
-        // ใช้ toast แทน alert เมื่อบันทึกสำเร็จ
-        const { toast } = await import('react-toastify');
-        toast.success('บันทึกข้อมูลเรียบร้อยแล้ว');
-        router.refresh();
-        onSaved?.();
-        onClose();
-      } else {
-        const { toast } = await import('react-toastify');
-        toast.error('เกิดข้อผิดพลาดในการบันทึก: ' + (result.error || 'ไม่ทราบสาเหตุ'));
+      // Mockup success - no actual database save
+      const { toast } = await import('react-toastify');
+      toast.success('บันทึกข้อมูลเรียบร้อยแล้ว (Mockup)');
+      
+      // Call onSaved callback if provided
+      if (onSaved) {
+        onSaved();
       }
+      
+      onClose();
     } catch (error) {
       console.error('Save error:', error);
       const { toast } = await import('react-toastify');
-      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+      toast.error('เกิดข้อผิดพลาดในการบันทึก (Mockup)');
     } finally {
       setIsSaving(false);
     }

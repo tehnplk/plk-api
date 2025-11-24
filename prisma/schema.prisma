@@ -58,7 +58,7 @@ model KpiReport {
   sum_result String?        // ผลรวมผลงาน
   rate        Float?        // อัตราผลงาน
 
-  update_at  DateTime @updatedAt // วันที่อัปเดตล่าสุด
+  updated_at  DateTime @updatedAt // วันที่อัปเดตล่าสุด
 
   @@id([money_year, area_name, kpi_id])  // composite primary key
   @@map("kpi_report")                   // ชื่อตารางจริงใน SQLite

@@ -72,7 +72,7 @@ const KPITable: React.FC<KPITableProps> = ({
   const [remoteData, setRemoteData] = useState<KPIItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<'id' | 'name' | 'criteria' | 'level' | 'department'>('id');
+  const [sortKey, setSortKey] = useState<'id' | 'name' | 'criteria' | 'department' | 'level' | 'status'>('id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Clear all filters and scroll to KPI table section
@@ -99,9 +99,6 @@ const KPITable: React.FC<KPITableProps> = ({
       }
     });
   };
-  const [kpiSummary, setKpiSummary] = useState<
-    Record<string, { rate: string | null; lastUpdated: string | null }>
-  >({});
 
   useEffect(() => {
     if (data && data.length > 0) return;
@@ -179,91 +176,6 @@ const KPITable: React.FC<KPITableProps> = ({
   }, [data]);
 
   const sourceData: KPIItem[] = data && data.length > 0 ? data : remoteData || [];
-
-  useEffect(() => {
-    if (!moneyYear || sourceData.length === 0 || disableDatabaseFetch) return;
-
-    let cancelled = false;
-
-    const monthFields = [
-      'result_oct',
-      'result_nov',
-      'result_dec',
-      'result_jan',
-      'result_feb',
-      'result_mar',
-      'result_apr',
-      'result_may',
-      'result_jun',
-      'result_jul',
-      'result_aug',
-      'result_sep',
-    ] as const;
-
-    const fetchSummary = async () => {
-      const result: Record<string, { rate: string | null; lastUpdated: string | null }> = {};
-
-      try {
-        // Use batch endpoint to fetch all KPI summaries at once
-        const kpiIds = sourceData.map(item => item.id);
-        const res = await fetch('/api/kpis/summaries', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            kpiIds,
-            moneyYear,
-          }),
-        });
-
-        if (!res.ok) {
-          console.error('Failed to fetch KPI summaries:', res.statusText);
-          return;
-        }
-
-        const summaries = await res.json();
-        
-        if (!Array.isArray(summaries)) {
-          console.error('Invalid response format from batch endpoint');
-          return;
-        }
-
-        // Process the batch results
-        for (const summary of summaries) {
-          if (summary.error) {
-            console.error(`Error fetching summary for KPI ${summary.kpiId}:`, summary.error);
-            continue;
-          }
-
-          if (summary.data) {
-            result[summary.kpiId] = {
-              rate: summary.data.rate ? summary.data.rate.toFixed(2) : null,
-              lastUpdated: summary.data.lastUpdated
-                ? new Date(summary.data.lastUpdated).toLocaleDateString('th-TH', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                  })
-                : null,
-            };
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching KPI summaries:', error);
-      }
-
-      if (!cancelled) {
-        setKpiSummary(result);
-      }
-    };
-
-    fetchSummary();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [moneyYear, sourceData, refreshVersion]);
 
   const departmentOptions = useMemo(() => {
     const set = new Set<string>();
@@ -571,10 +483,6 @@ const KPITable: React.FC<KPITableProps> = ({
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-800 border border-blue-200">
                         {kpi.result}
                       </span>
-                    ) : kpiSummary[kpi.id]?.rate ? (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800 border border-green-200">
-                        {kpiSummary[kpi.id]?.rate}
-                      </span>
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
@@ -593,7 +501,7 @@ const KPITable: React.FC<KPITableProps> = ({
                     </button>
                   </td>
                   <td className="px-6 py-4 text-center text-xs text-gray-500 whitespace-nowrap">
-                    {kpiSummary[kpi.id]?.lastUpdated ?? kpi.lastUpdated ?? '-'}
+                    {kpi.lastUpdated || '-'}
                   </td>
                   {showActionColumn && (
                     <td className="px-6 py-4 text-center">

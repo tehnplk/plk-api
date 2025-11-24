@@ -93,7 +93,7 @@ export class KpiDataCache {
 
   // Fetch data from Google Sheets API
   async fetchFromApi(): Promise<any[]> {
-    const response = await fetch('/api/kpis/db');
+    const response = await fetch('/api/kpi/sheet');
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

@@ -21,6 +21,38 @@ const getKpiTypeLabel = (type: string) => {
   }
 };
 
+const getEvaluatedStatus = (kpi: KPIItem): KPIStatus => {
+  // Simple status evaluation using sum_result, condition, and target_result
+  if (!kpi.result || kpi.result === '0') {
+    return 'pending';
+  }
+
+  // Evaluate condition: sum_result [condition] target_result
+  const sumResult = parseFloat(kpi.result || '0');
+  const targetResult = parseFloat(kpi.target?.toString() || '0');
+
+  if (kpi.condition) {
+    // Simple mathematical evaluation
+    switch (kpi.condition.trim()) {
+      case '>':
+        return sumResult > targetResult ? 'pass' : 'fail';
+      case '>=':
+        return sumResult >= targetResult ? 'pass' : 'fail';
+      case '<':
+        return sumResult < targetResult ? 'pass' : 'fail';
+      case '<=':
+        return sumResult <= targetResult ? 'pass' : 'fail';
+      case '=':
+      case '==':
+        return sumResult === targetResult ? 'pass' : 'fail';
+      default:
+        return 'pending';
+    }
+  }
+
+  return 'pending';
+};
+
 export interface KPIItem {
   id: string;
   name: string;
@@ -242,7 +274,7 @@ const KPITable: React.FC<KPITableProps> = ({
     const matchText =
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchStatus = selectedStatus === 'ทั้งหมด' || item.status === selectedStatus;
+    const matchStatus = selectedStatus === 'ทั้งหมด' || getEvaluatedStatus(item) === selectedStatus;
     const matchKpiType = selectedKpiType === 'ทั้งหมด' || item.kpiType === selectedKpiType;
     const matchDepartment =
       selectedDepartment === 'ทั้งหมด' || item.department === selectedDepartment;
@@ -257,70 +289,23 @@ const KPITable: React.FC<KPITableProps> = ({
   const totalColumns = showActionColumn ? 10 : 9;
 
   const getStatusBadge = (kpi: KPIItem) => {
-    // Debug logging to identify the issue
-    console.log('Debug Status:', {
-      result: kpi.result,
-      target: kpi.target,
-      condition: kpi.condition,
-      sumResult: parseFloat(kpi.result || '0'),
-      targetResult: parseFloat(kpi.target?.toString() || '0')
-    });
+    const evaluatedStatus = getEvaluatedStatus(kpi);
 
-    // Simple status evaluation using sum_result, condition, and target_result
-    if (!kpi.result || kpi.result === '0') {
-      return (
-        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
-          รอประเมิน
-        </span>
-      );
+    switch (evaluatedStatus) {
+      case 'pass':
+        return (
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500" title="ผ่าน"></span>
+        );
+      case 'fail':
+        return (
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500" title="ไม่ผ่าน"></span>
+        );
+      case 'pending':
+      default:
+        return (
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-500" title="รอประเมิน"></span>
+        );
     }
-
-    // Evaluate condition: sum_result [condition] target_result
-    const sumResult = parseFloat(kpi.result || '0');
-    const targetResult = parseFloat(kpi.target?.toString() || '0');
-    let isPass = false;
-
-    if (kpi.condition) {
-      // Simple mathematical evaluation
-      switch (kpi.condition.trim()) {
-        case '>':
-          isPass = sumResult > targetResult;
-          break;
-        case '>=':
-          isPass = sumResult >= targetResult;
-          break;
-        case '<':
-          isPass = sumResult < targetResult;
-          break;
-        case '<=':
-          isPass = sumResult <= targetResult;
-          break;
-        case '=':
-        case '==':
-          isPass = sumResult === targetResult;
-          break;
-        default:
-          // Fallback to original status if condition is not recognized
-          console.log('Unrecognized condition:', kpi.condition);
-          return (
-            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
-              รอประเมิน
-            </span>
-          );
-      }
-    }
-
-    console.log('Evaluation result:', { sumResult, targetResult, condition: kpi.condition, isPass });
-
-    return isPass ? (
-      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-        ผ่านเกณฑ์
-      </span>
-    ) : (
-      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-        ไม่ผ่านเกณฑ์
-      </span>
-    );
   };
 
   const handleSort = (key: 'id' | 'name' | 'criteria' | 'level' | 'department') => {
@@ -393,9 +378,9 @@ const KPITable: React.FC<KPITableProps> = ({
             onChange={(e) => setSelectedStatus(e.target.value as 'ทั้งหมด' | KPIStatus)}
           >
             <option value="ทั้งหมด">สถานะทั้งหมด</option>
-            <option value="pass">ผ่านเกณฑ์</option>
-            <option value="fail">ไม่ผ่านเกณฑ์</option>
-            <option value="pending">รอประเมิน</option>
+            <option value="pass">🟢 ผ่าน</option>
+            <option value="fail">🔴 ไม่ผ่าน</option>
+            <option value="pending">🟡 รอประเมิน</option>
           </select>
           <button
             onClick={handleClearFilters}

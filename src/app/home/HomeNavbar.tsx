@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import type { Session } from 'next-auth';
 import { signOut } from 'next-auth/react';
 import { Activity, LayoutDashboard, LogIn, User, FileText, RefreshCw, ChevronDown } from 'lucide-react';
+import { signInWithHealthId } from '../actions/sign-in';
 
 interface HomeNavbarProps {
   moneyYear: number;
@@ -30,7 +31,20 @@ export default function HomeNavbar({
   districtOptions = []
 }: HomeNavbarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Parse user profile from session
+  const userProfile = useMemo(() => {
+    try {
+      return JSON.parse((session as any)?.user?.profile || '{}');
+    } catch {
+      return {};
+    }
+  }, [session]);
+
+  // Extract position/department from parsed profile
+  const userDepartment = userProfile?.organization?.[0]?.position || '';
 
   const handleLogout = () => {
     // Perform logout
@@ -66,7 +80,8 @@ export default function HomeNavbar({
   };
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-green-100">
+    <>
+      <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-green-100">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold shadow">
@@ -83,6 +98,18 @@ export default function HomeNavbar({
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Refresh Button */}
+          {showRefreshButton && onRefresh && (
+            <button 
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+              {isRefreshing ? 'กำลังโหลด...' : 'รีเฟรชข้อมูล'}
+            </button>
+          )}
+
           {/* District Selector */}
           {districtOptions.length > 0 && onDistrictChange && (
             <select
@@ -99,18 +126,6 @@ export default function HomeNavbar({
             </select>
           )}
 
-          {/* Refresh Button */}
-          {showRefreshButton && onRefresh && (
-            <button 
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-              {isRefreshing ? 'กำลังโหลด...' : 'รีเฟรชข้อมูล'}
-            </button>
-          )}
-
           {session ? (
             <>
               <button
@@ -124,11 +139,11 @@ export default function HomeNavbar({
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 transition-colors"
+                  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 transition-colors cursor-pointer"
                 >
                   <User size={16} />
                   <span className="hidden md:block truncate max-w-[200px]">
-                    {displayName} {((session as any)?.user?.ssj_department || (session as any)?.user?.department) ? `(${(session as any)?.user?.ssj_department || (session as any)?.user?.department})` : ''}
+                    {displayName}
                   </span>
                   <ChevronDown 
                     size={14} 
@@ -138,29 +153,19 @@ export default function HomeNavbar({
 
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {displayName} {((session as any)?.user?.ssj_department || (session as any)?.user?.department) ? `(${(session as any)?.user?.ssj_department || (session as any)?.user?.department})` : ''}
-                      </p>
-                      {/* Temporary debugging - remove after fixing */}
-                      <p className="text-xs text-gray-400">
-                        Debug: {JSON.stringify((session as any)?.user, null, 1)}
-                      </p>
-                    </div>
                     <button
                       onClick={() => {
                         setIsDropdownOpen(false);
-                        // Profile action - could navigate to profile page
-                        console.log('Profile clicked');
+                        setIsProfileModalOpen(true);
                       }}
-                      className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
                     >
                       <User size={16} />
                       Profile
                     </button>
                     <button
                       onClick={handleLogout}
-                      className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
                     >
                       <LogIn size={16} />
                       Logout
@@ -177,16 +182,139 @@ export default function HomeNavbar({
               >
                 <FileText size={16} /> รายการตัวชี้วัด
               </button>
-              <Link
-                href="/login"
-                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-medium"
-              >
-                <LogIn size={16} /> เข้าสู่ระบบ
-              </Link>
+              <form action={signInWithHealthId}>
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-medium cursor-pointer"
+                >
+                  <LogIn size={16} /> เข้าสู่ระบบ
+                </button>
+              </form>
             </>
           )}
         </div>
       </div>
     </header>
+
+    {/* Profile Modal */}
+    {isProfileModalOpen && userProfile && (
+      <div 
+        className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-white/30 cursor-pointer"
+        onClick={() => setIsProfileModalOpen(false)}
+      >
+        <div 
+          className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-6">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">ข้อมูลผู้ใช้</h3>
+              <button
+                onClick={() => setIsProfileModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Basic Information */}
+              <div className="border-b pb-4">
+                <h4 className="text-sm font-medium text-gray-500 mb-2">ข้อมูลส่วนตัว</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">ชื่อ-นามสกุล:</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {userProfile.title_th} {userProfile.name_th}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">ชื่อ-นามสกุล (Eng):</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {userProfile.title_en} {userProfile.name_eng}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Email:</span>
+                    <span className="text-sm font-medium text-gray-900">{userProfile.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">วันเกิด:</span>
+                    <span className="text-sm font-medium text-gray-900">{userProfile.date_of_birth}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Organization Information */}
+              {userProfile.organization && userProfile.organization.length > 0 && (
+                <div className="border-b pb-4">
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">ข้อมูลหน่วยงาน</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">ตำแหน่ง:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {userProfile.organization[0].position}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">สังกัด:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {userProfile.organization[0].affiliation}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">หน่วยงาน:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {userProfile.organization[0].hname_th}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">รหัส:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {userProfile.organization[0].hcode}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">ที่อยู่:</span>
+                      <span className="text-sm font-medium text-gray-900 text-right">
+                        {userProfile.organization[0].address?.province}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Account Information */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 mb-2">ข้อมูลบัญชี</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Account ID:</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {userProfile.account_id}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Provider ID:</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {userProfile.provider_id}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">วันที่สร้าง:</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {new Date(userProfile.created_at).toLocaleDateString('th-TH')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, FileText, Calendar, TrendingUp, Target, Users, Award, Building } from 'lucide-react';
+import { kpiDataCache } from '../../../utils/kpiDataCache';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ArrowLeft, TrendingUp, Target, Calendar, Building } from 'lucide-react';
 import Link from 'next/link';
 import { MONTH_NAMES, MONTH_FIELDS, DISTRICTS } from '@/config/constants';
 
@@ -58,17 +59,22 @@ export default function KPIDetailPage() {
         setLoading(true);
         setError(null);
 
-        // First, fetch KPI metadata from Google Apps Script
+        // First, fetch KPI metadata from cache
         let kpiMetadata = null;
         try {
-          const metadataRes = await fetch('/api/kpis');
-          if (metadataRes.ok) {
-            const metadataJson = await metadataRes.json();
-            const allKpis = Array.isArray(metadataJson) ? metadataJson : metadataJson.data ?? [];
-            kpiMetadata = allKpis.find((kpi: any) => String(kpi.id) === kpiId);
+          const cachedData = kpiDataCache.getCachedData();
+          let allKpis = [];
+          
+          if (cachedData) {
+            allKpis = cachedData;
+          } else {
+            // Cache miss, fetch and cache
+            allKpis = await kpiDataCache.loadData();
           }
+          
+          kpiMetadata = allKpis.find((kpi: any) => String(kpi.id) === kpiId);
         } catch (err) {
-          console.warn('Failed to fetch KPI metadata:', err);
+          console.warn('Failed to fetch KPI metadata from cache:', err);
         }
 
         // Mockup mode - no database fetching

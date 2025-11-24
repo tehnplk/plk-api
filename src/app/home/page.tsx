@@ -156,6 +156,22 @@ export default function HomePage() {
   // Department filtering state
   const [selectedDepartment, setSelectedDepartment] = useState("ทั้งหมด");
 
+  // Parse user profile from session to get department
+  const userProfile = useMemo(() => {
+    try {
+      return JSON.parse((session as any)?.user?.profile || '{}');
+    } catch {
+      return {};
+    }
+  }, [session]);
+
+  // Set department filter based on login selection
+  useEffect(() => {
+    if (session && userProfile?.organization?.[0]?.position) {
+      setSelectedDepartment(userProfile.organization[0].position);
+    }
+  }, [session, userProfile]);
+
   // Handle district change with scroll to top
   const handleDistrictChange = (district: string) => {
     setSelectedDistrictScope(district);

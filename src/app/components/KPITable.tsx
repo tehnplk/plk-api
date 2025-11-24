@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { FileText, Search, Save, TrendingUp, RotateCcw } from 'lucide-react';
+import { kpiDataCache } from '../../utils/kpiDataCache';
 import KPIDetailModal from './KPIDetailModal';
 import { getStatusFromCondition } from '@/utils/conditionEvaluator';
 
@@ -111,14 +112,19 @@ const KPITable: React.FC<KPITableProps> = ({
         setLoading(true);
         setError(null);
 
-        const res = await fetch('/api/kpis');
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
+        // Use cache instead of direct API call
+        const cachedData = kpiDataCache.getCachedData();
+        let sourceArray: any[] = [];
+        
+        if (cachedData) {
+          sourceArray = cachedData;
+        } else {
+          // Cache miss, fetch and cache
+          const data = await kpiDataCache.loadData();
+          sourceArray = data;
         }
-        const json = await res.json();
+        
         if (cancelled) return;
-
-        const sourceArray: any[] = Array.isArray(json) ? json : json.data || [];
 
         const rows: KPIItem[] = sourceArray.map((raw: any, index: number) => {
           const areaLevel: string = raw.area_level ?? raw.areaLevel ?? '';

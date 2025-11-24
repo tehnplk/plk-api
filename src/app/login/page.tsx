@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { User, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { User, Building, ArrowRight, ChevronRight } from 'lucide-react';
+import { kpiDataCache } from '../../utils/kpiDataCache';
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { signInWithHealthId } from '../actions/sign-in';
 
@@ -24,12 +25,17 @@ export default function LoginPage() {
     const fetchDepartments = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/kpis');
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
+        
+        // Use cache instead of direct API call
+        const cachedData = kpiDataCache.getCachedData();
+        let rows = [];
+        
+        if (cachedData) {
+          rows = cachedData;
+        } else {
+          // Cache miss, fetch and cache
+          rows = await kpiDataCache.loadData();
         }
-        const json = await res.json();
-        const rows = Array.isArray(json) ? json : json.data ?? [];
 
         const set = new Set<string>();
         rows.forEach((item: any) => {
@@ -82,7 +88,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600">
             <User size={32} />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">เข้าสู่ระบบรายงาน</h2>
+          <h2 className="text-2xl font-bold text-gray-800">เข้าสู่ระบบ</h2>
           <p className="text-gray-500 mt-1">เลือกกลุ่มงานเพื่อดำเนินการต่อ</p>
         </div>
 

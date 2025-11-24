@@ -105,11 +105,6 @@ export default function LoginPage() {
                 <form key={name} action={signInWithHealthId} className="w-full h-full">
                   <button
                     type="submit"
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        window.localStorage.setItem('selectedDeptId', name);
-                      }
-                    }}
                     className="w-full h-full min-h-[96px] px-4 py-5 text-left border border-gray-200 rounded-2xl hover:border-green-500 hover:bg-green-50 hover:text-green-700 transition-all group flex flex-col justify-between"
                   >
                     <div className="font-semibold leading-snug line-clamp-2">{name}</div>

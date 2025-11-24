@@ -7,15 +7,15 @@
       "divide_number": 100000,
       "sum_result": 0,
       "condition": "<",
-      "target_result": 16,
+      "target_result": 0,
       "excellence": "PP&P",
       "area_level": "อำเภอ",
       "ssj_department": "ส่งเสริมสุขภาพ",
       "ssj_pm": "อรรถพล",
       "moph_department": "กรมอนามัย",
-      "is_moph_kpi": "YES",
-      "grade": "",
-      "template_url": ""
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
+      "template_url": "https://drive.google.com/drive/folders/1oCRZPE1aNnD6iBuxbYz5bh2zKUyK2HI4?usp=sharing"
     },
     {
       "id": "KPI02",
@@ -30,8 +30,8 @@
       "ssj_department": "ส่งเสริมสุขภาพ",
       "ssj_pm": "อรรถพล",
       "moph_department": "กรมอนามัย",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -47,8 +47,8 @@
       "ssj_department": "ส่งเสริมสุขภาพ",
       "ssj_pm": "อรรถพล",
       "moph_department": "กรมอนามัย",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -64,8 +64,8 @@
       "ssj_department": "ควบคุมโรคติดต่อ",
       "ssj_pm": "อรรถพล",
       "moph_department": "กรมอนามัย",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -81,8 +81,8 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "อรรถพล",
       "moph_department": "กรมอนามัย",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -98,8 +98,8 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -115,8 +115,8 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -132,8 +132,8 @@
       "ssj_department": "อนามัยสิ่งแวดล้อมและอาชีวอนามัย",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -149,8 +149,8 @@
       "ssj_department": "อนามัยสิ่งแวดล้อมและอาชีวอนามัย",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -166,8 +166,8 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -183,8 +183,8 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -200,8 +200,8 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ไม่ผ่าน",
       "template_url": ""
     },
     {
@@ -217,8 +217,8 @@
       "ssj_department": "ควบคุมโรคติดต่อ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ไม่ผ่าน",
       "template_url": ""
     },
     {
@@ -234,8 +234,8 @@
       "ssj_department": "ควบคุมโรคติดต่อ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ไม่ผ่าน",
       "template_url": ""
     },
     {
@@ -251,8 +251,8 @@
       "ssj_department": "ส่งเสริมสุขภาพ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ไม่ผ่าน",
       "template_url": ""
     },
     {
@@ -268,8 +268,8 @@
       "ssj_department": "การแพทย์แผนไทยและสมุนไพร",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -285,8 +285,8 @@
       "ssj_department": "การแพทย์แผนไทยและสมุนไพร",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -302,8 +302,8 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -319,8 +319,8 @@
       "ssj_department": "ส่งเสริมสุขภาพ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -336,8 +336,8 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ไม่ผ่าน",
       "template_url": ""
     },
     {
@@ -353,8 +353,8 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ไม่ผ่าน",
       "template_url": ""
     },
     {
@@ -370,8 +370,8 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -387,8 +387,8 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -404,8 +404,8 @@
       "ssj_department": "ส่งเสริมสุขภาพ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ไม่ผ่าน",
       "template_url": ""
     },
     {
@@ -421,8 +421,8 @@
       "ssj_department": "ส่งเสริมสุขภาพ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ไม่ผ่าน",
       "template_url": ""
     },
     {
@@ -438,8 +438,8 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -455,8 +455,8 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -472,8 +472,8 @@
       "ssj_department": "ส่งเสริมสุขภาพ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -489,8 +489,8 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -506,8 +506,8 @@
       "ssj_department": "พัฒนายุทธศาสตร์สาธารณสุข",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -523,8 +523,8 @@
       "ssj_department": "บริหารทรัพยากรบุคคล",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -540,8 +540,8 @@
       "ssj_department": "สุขภาพดิจิทัล",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -557,8 +557,8 @@
       "ssj_department": "กฏหมาย",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -574,8 +574,8 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -591,8 +591,8 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -608,8 +608,8 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -625,8 +625,8 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -642,8 +642,8 @@
       "ssj_department": "ประกันสุขภาพ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -659,8 +659,8 @@
       "ssj_department": "ประกันสุขภาพ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -676,8 +676,8 @@
       "ssj_department": "คุ้มครองผู้บริโภคและเภสัชสาธารณสุข",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -693,8 +693,8 @@
       "ssj_department": "คุ้มครองผู้บริโภคและเภสัชสาธารณสุข",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "",
-      "grade": "",
+      "kpi_type": "KPI",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -710,8 +710,8 @@
       "ssj_department": "คุ้มครองผู้บริโภคและเภสัชสาธารณสุข",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
-      "grade": "",
+      "kpi_type": "KPR",
+      "grade": "ผ่าน",
       "template_url": ""
     },
     {
@@ -727,7 +727,7 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -744,7 +744,7 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -761,7 +761,7 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -778,7 +778,7 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -795,7 +795,7 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -812,7 +812,7 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -829,7 +829,7 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -846,7 +846,7 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -863,7 +863,7 @@
       "ssj_department": "ควบคุุมโรคไม่ติดต่อ สุขภาพจิตและยาเสพติด",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -880,7 +880,7 @@
       "ssj_department": "ควบคุมโรคติดต่อ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -897,7 +897,7 @@
       "ssj_department": "ควบคุมโรคติดต่อ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -914,7 +914,7 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -931,7 +931,7 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     },
@@ -948,7 +948,7 @@
       "ssj_department": "พัฒนาคุณภาพและรูปแบบบริการ",
       "ssj_pm": "",
       "moph_department": "",
-      "is_moph_kpi": "YES",
+      "kpi_type": "KPR",
       "grade": "",
       "template_url": ""
     }

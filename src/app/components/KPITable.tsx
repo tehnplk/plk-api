@@ -8,6 +8,19 @@ import { getStatusFromCondition } from '@/utils/conditionEvaluator';
 
 type KPIStatus = 'pass' | 'fail' | 'pending';
 
+const getKpiTypeLabel = (type: string) => {
+  switch (type) {
+    case 'KPI':
+      return 'ตัวชี้วัดจังหวัด';
+    case 'KPR':
+      return 'ตัวชี้วัดตรวจราชการ';
+    case 'PA':
+      return 'ตัวชี้วัดตามคำรับรองการปฏิบัติราชการ';
+    default:
+      return type;
+  }
+};
+
 export interface KPIItem {
   id: string;
   name: string;
@@ -19,12 +32,12 @@ export interface KPIItem {
   status: KPIStatus;
   target?: number;
   lastUpdated?: string;
-  isMophKpi?: boolean;
   divideNumber?: number;
   condition?: string;
   sumResult?: string;
   ssjPm?: string;
   mophDepartment?: string;
+  kpiType?: string;
 }
 
 const EXCELLENCE_DESCRIPTION: Record<string, string> = {
@@ -67,7 +80,7 @@ const KPITable: React.FC<KPITableProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState(initialDepartment || 'ทั้งหมด');
   const [selectedStatus, setSelectedStatus] = useState<KPIStatus | 'ทั้งหมด'>('ทั้งหมด');
-  const [selectedLevel, setSelectedLevel] = useState<'province' | 'district' | 'ทั้งหมด'>('ทั้งหมด');
+  const [selectedKpiType, setSelectedKpiType] = useState<string>('ทั้งหมด');
   const [showMophOnly, setShowMophOnly] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedKpiId, setSelectedKpiId] = useState<string | null>(null);
@@ -80,9 +93,9 @@ const KPITable: React.FC<KPITableProps> = ({
   // Clear all filters and scroll to KPI table section
   const handleClearFilters = () => {
     setSearchTerm('');
-    setSelectedDepartment(initialDepartment || 'ทั้งหมด');
+    setSelectedDepartment('ทั้งหมด');
     setSelectedStatus('ทั้งหมด');
-    setSelectedLevel('ทั้งหมด');
+    setSelectedKpiType('ทั้งหมด');
     setShowMophOnly(false);
     
     // Use requestAnimationFrame to ensure scroll happens after DOM updates
@@ -153,7 +166,7 @@ const KPITable: React.FC<KPITableProps> = ({
             status: 'pending',
             target: typeof raw.target_result === 'number' ? raw.target_result : undefined,
             lastUpdated: undefined,
-            isMophKpi: String(raw.is_moph_kpi ?? '').toUpperCase() === 'YES',
+            kpiType: raw.kpi_type,
             divideNumber,
           };
         });
@@ -185,6 +198,14 @@ const KPITable: React.FC<KPITableProps> = ({
       if (item.department) set.add(item.department);
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'));
+  }, [sourceData]);
+
+  const kpiTypeOptions = useMemo(() => {
+    const set = new Set<string>();
+    sourceData.forEach((item) => {
+      if (item.kpiType) set.add(item.kpiType);
+    });
+    return Array.from(set).sort();
   }, [sourceData]);
 
   const sortedData = [...sourceData].sort((a, b) => {
@@ -222,46 +243,84 @@ const KPITable: React.FC<KPITableProps> = ({
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = selectedStatus === 'ทั้งหมด' || item.status === selectedStatus;
-    const matchKpiType =
-      selectedLevel === 'ทั้งหมด' || item.level === selectedLevel;
+    const matchKpiType = selectedKpiType === 'ทั้งหมด' || item.kpiType === selectedKpiType;
     const matchDepartment =
-      disableDepartmentFiltering || selectedDepartment === 'ทั้งหมด' || item.department === selectedDepartment;
+      selectedDepartment === 'ทั้งหมด' || item.department === selectedDepartment;
     
     return matchText && matchStatus && matchKpiType && matchDepartment;
   });
 
   const totalCount = filteredData.length;
-  const mophCount = filteredData.filter((item: KPIItem) => item.isMophKpi).length;
+  const mophCount = filteredData.filter((item: KPIItem) => item.kpiType === 'KPR').length;
   const provinceCount = totalCount - mophCount;
 
-  const totalColumns = showActionColumn ? 9 : 8;
+  const totalColumns = showActionColumn ? 10 : 9;
 
   const getStatusBadge = (kpi: KPIItem) => {
-    // Evaluate status based on condition if available
-    const evaluatedStatus = kpi.condition && kpi.target !== undefined && kpi.result !== null
-      ? getStatusFromCondition(kpi.condition, kpi.target, parseFloat(kpi.result || '0'))
-      : kpi.status;
+    // Debug logging to identify the issue
+    console.log('Debug Status:', {
+      result: kpi.result,
+      target: kpi.target,
+      condition: kpi.condition,
+      sumResult: parseFloat(kpi.result || '0'),
+      targetResult: parseFloat(kpi.target?.toString() || '0')
+    });
 
-    switch (evaluatedStatus) {
-      case 'pass':
-        return (
-          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-            ผ่านเกณฑ์
-          </span>
-        );
-      case 'fail':
-        return (
-          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-            ไม่ผ่าน
-          </span>
-        );
-      default:
-        return (
-          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
-            รอประเมิน
-          </span>
-        );
+    // Simple status evaluation using sum_result, condition, and target_result
+    if (!kpi.result || kpi.result === '0') {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+          รอประเมิน
+        </span>
+      );
     }
+
+    // Evaluate condition: sum_result [condition] target_result
+    const sumResult = parseFloat(kpi.result || '0');
+    const targetResult = parseFloat(kpi.target?.toString() || '0');
+    let isPass = false;
+
+    if (kpi.condition) {
+      // Simple mathematical evaluation
+      switch (kpi.condition.trim()) {
+        case '>':
+          isPass = sumResult > targetResult;
+          break;
+        case '>=':
+          isPass = sumResult >= targetResult;
+          break;
+        case '<':
+          isPass = sumResult < targetResult;
+          break;
+        case '<=':
+          isPass = sumResult <= targetResult;
+          break;
+        case '=':
+        case '==':
+          isPass = sumResult === targetResult;
+          break;
+        default:
+          // Fallback to original status if condition is not recognized
+          console.log('Unrecognized condition:', kpi.condition);
+          return (
+            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+              รอประเมิน
+            </span>
+          );
+      }
+    }
+
+    console.log('Evaluation result:', { sumResult, targetResult, condition: kpi.condition, isPass });
+
+    return isPass ? (
+      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+        ผ่านเกณฑ์
+      </span>
+    ) : (
+      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+        ไม่ผ่านเกณฑ์
+      </span>
+    );
   };
 
   const handleSort = (key: 'id' | 'name' | 'criteria' | 'level' | 'department') => {
@@ -318,12 +377,15 @@ const KPITable: React.FC<KPITableProps> = ({
           )}
           <select
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            value={selectedLevel}
-            onChange={(e) => setSelectedLevel(e.target.value as 'ทั้งหมด' | 'province' | 'district')}
+            value={selectedKpiType}
+            onChange={(e) => setSelectedKpiType(e.target.value)}
           >
             <option value="ทั้งหมด">ประเภทตัวชี้วัดทั้งหมด</option>
-            <option value="province">ตัวชี้วัดจังหวัด</option>
-            <option value="district">ตัวชี้วัดอำเภอ</option>
+            {kpiTypeOptions.map((type) => (
+              <option key={type} value={type}>
+                {getKpiTypeLabel(type)}
+              </option>
+            ))}
           </select>
           <select
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -416,6 +478,7 @@ const KPITable: React.FC<KPITableProps> = ({
                 </button>
               </th>
               <th className="px-6 py-4 text-center">ผลงาน</th>
+              <th className="px-6 py-4 text-center">สถานะ</th>
               <th className="px-6 py-4 text-center">ดูรายละเอียด</th>
               <th className="px-6 py-4 text-center">อัพเดทล่าสุด</th>
               {showActionColumn && (
@@ -488,6 +551,9 @@ const KPITable: React.FC<KPITableProps> = ({
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {getStatusBadge(kpi)}
                   </td>
                   <td className="px-6 py-4 text-center">
                     <button

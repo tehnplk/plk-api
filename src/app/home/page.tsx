@@ -32,7 +32,7 @@ import KPITable from "../components/KPITable";
 import HomeNavbar from "./HomeNavbar";
 import ReportKpiModal from "../components/ReportKpiModal";
 import { toast } from "react-toastify";
-import { kpiDataCache, transformKpiData } from "../../utils/kpiDataCache";
+import { kpiDataCache, transformKpiData } from '../../utils/kpiDataCache';
 
 const THEME = {
   primary: "#00A651",
@@ -719,35 +719,7 @@ export default function HomePage() {
           <div id="kpi-table-section">
             <KPITable
               key={refreshCounter}
-              data={kpiData.map((item: any) => ({
-                id: String(item.id ?? ""),
-                name: String(item.name ?? ""),
-                excellence: String(item.excellence ?? ""),
-                criteria: String(item.evaluation_criteria ?? ""),
-                level:
-                  item.area_level === "อำเภอ"
-                    ? ("district" as const)
-                    : ("province" as const),
-                department: String(item.ssj_department ?? ""),
-                result:
-                  item.sum_result != null ? String(item.sum_result) : null, // ดึงจาก sum_result ใน google sheet (รวมค่า 0)
-                status: "pending" as const,
-                target:
-                  typeof item.target_result === "number"
-                    ? item.target_result
-                    : undefined,
-                lastUpdated: undefined,
-                isMophKpi:
-                  String(item.is_moph_kpi ?? "").toUpperCase() === "YES",
-                divideNumber:
-                  typeof item.divide_number === "number"
-                    ? item.divide_number
-                    : undefined,
-                condition: String(item.condition ?? ""),
-                sumResult: String(item.sum_result ?? ""),
-                ssjPm: String(item.ssj_pm ?? ""),
-                mophDepartment: String(item.moph_department ?? ""),
-              }))}
+              data={transformKpiData(kpiData)}
               initialDepartment={selectedDepartment}
               moneyYear={moneyYear}
               refreshVersion={refreshVersion}

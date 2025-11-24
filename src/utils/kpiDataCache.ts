@@ -1,6 +1,8 @@
 // KPI Data Cache Utility
 // Shared between /home page and components
 
+type KPIStatus = 'pass' | 'fail' | 'pending';
+
 const CACHE_KEY = 'kpi-master-data';
 const CACHE_TIMESTAMP_KEY = 'kpi-master-timestamp';
 const CACHE_EXPIRY_MINUTES = 60; // 1 hour cache
@@ -9,14 +11,16 @@ export interface KpiItem {
   id: string;
   name: string;
   criteria: string;
-  level: string;
+  level: 'province' | 'district';
   department: string;
-  target: number | null;
-  divideNumber: number | null;
-  isMophKpi: boolean;
+  target: number | undefined;
+  divideNumber: number | undefined;
+  result: string | null;
+  status: KPIStatus;
   excellence: string;
   ssj_pm: string;
   moph_department: string;
+  kpiType?: string;
 }
 
 export class KpiDataCache {
@@ -159,11 +163,14 @@ export function transformKpiData(rawData: any[]): KpiItem[] {
     id: String(item.id ?? ''),
     name: String(item.name ?? ''),
     criteria: String(item.evaluation_criteria ?? ''),
-    level: String(item.area_level === 'อำเภอ' ? 'อำเภอ' : 'จังหวัด'),
+    level: item.area_level === 'อำเภอ' ? 'district' : 'province',
     department: String(item.ssj_department ?? ''),
-    target: item.target_result ? Number(item.target_result) : null,
-    divideNumber: item.divide_number ? Number(item.divide_number) : null,
-    isMophKpi: item.is_moph_kpi === 'YES',
+    target: item.target_result ? Number(item.target_result) : undefined,
+    divideNumber: item.divide_number ? Number(item.divide_number) : undefined,
+    result: item.sum_result != null ? String(item.sum_result) : null,
+    status: 'pending' as KPIStatus,
+    condition: String(item.condition ?? ''),
+    kpiType: item.kpi_type,
     excellence: String(item.excellence ?? ''),
     ssj_pm: String(item.ssj_pm ?? ''),
     moph_department: String(item.moph_department ?? ''),

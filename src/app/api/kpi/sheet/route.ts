@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       ssj_department: String(item.ssj_department ?? ''),
       ssj_pm: String(item.ssj_pm ?? ''),
       moph_department: String(item.moph_department ?? ''),
-      is_moph_kpi: String(item.is_moph_kpi ?? ''),
+      kpi_type: String(item.kpi_type ?? ''),
     }));
     
     // Apply filters if provided

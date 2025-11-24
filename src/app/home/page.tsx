@@ -151,7 +151,7 @@ export default function HomePage() {
   const [isKpiLoading, setIsKpiLoading] = useState(false);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [refreshVersion, setRefreshVersion] = useState(0);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   // Department filtering state
   const [selectedDepartment, setSelectedDepartment] = useState("ทั้งหมด");
@@ -164,13 +164,6 @@ export default function HomePage() {
       return {};
     }
   }, [session]);
-
-  // Set department filter based on login selection
-  useEffect(() => {
-    if (session && userProfile?.organization?.[0]?.position) {
-      setSelectedDepartment(userProfile.organization[0].position);
-    }
-  }, [session, userProfile]);
 
   // Handle district change with scroll to top
   const handleDistrictChange = (district: string) => {
@@ -475,18 +468,25 @@ export default function HomePage() {
 
   // Add ssj_department in parentheses if available
   const ssjDepartment = (session?.user as any)?.ssj_department;
-  console.log('Debug - session:', session);
-  console.log('Debug - ssjDepartment:', ssjDepartment);
-  console.log('Debug - displayName before:', displayName);
   
   if (displayName && ssjDepartment) {
     displayName = `${displayName} (${ssjDepartment})`;
   }
-  
-  console.log('Debug - displayName after:', displayName);
 
   if (!mounted) {
     return null;
+  }
+
+  // Show loading state while session is being established
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen font-sans flex items-center justify-center" style={{ backgroundColor: "#F0FDF4" }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">กำลังโหลดข้อมูลผู้ใช้...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

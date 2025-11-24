@@ -154,7 +154,19 @@ export default function HomePage() {
   const { data: session, status } = useSession();
 
   // Department filtering state
-  const [selectedDepartment, setSelectedDepartment] = useState("ทั้งหมด");
+  const [selectedDepartment, setSelectedDepartment] = useState(
+    (session?.user as any)?.ssj_department || "ทั้งหมด"
+  );
+
+  // Update department filter when session changes (for UI only)
+  useEffect(() => {
+    if (session?.user) {
+      const deptFromSession = (session.user as any).ssj_department;
+      if (deptFromSession) {
+        setSelectedDepartment(deptFromSession);
+      }
+    }
+  }, [session]);
 
   // Parse user profile from session to get department
   const userProfile = useMemo(() => {
@@ -707,7 +719,7 @@ export default function HomePage() {
           <div id="kpi-table-section">
             <KPITable
               key={refreshCounter}
-              data={filteredKpiData.map((item: any) => ({
+              data={kpiData.map((item: any) => ({
                 id: String(item.id ?? ""),
                 name: String(item.name ?? ""),
                 excellence: String(item.excellence ?? ""),
@@ -730,14 +742,13 @@ export default function HomePage() {
                 divideNumber:
                   typeof item.divide_number === "number"
                     ? item.divide_number
-                    : typeof item.divide_number === "string"
-                    ? parseFloat(item.divide_number) || undefined
                     : undefined,
                 condition: String(item.condition ?? ""),
                 sumResult: String(item.sum_result ?? ""),
                 ssjPm: String(item.ssj_pm ?? ""),
                 mophDepartment: String(item.moph_department ?? ""),
               }))}
+              initialDepartment={selectedDepartment}
               moneyYear={moneyYear}
               refreshVersion={refreshVersion}
               showHeaderSummary

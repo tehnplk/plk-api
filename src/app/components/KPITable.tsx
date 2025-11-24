@@ -47,6 +47,7 @@ interface KPITableProps {
   refreshVersion?: number;
   isLoading?: boolean;
   disableDatabaseFetch?: boolean; // New prop to disable Prisma database fetching
+  disableDepartmentFiltering?: boolean; // New prop to disable actual department filtering
 }
 
 const KPITable: React.FC<KPITableProps> = ({
@@ -61,6 +62,7 @@ const KPITable: React.FC<KPITableProps> = ({
   refreshVersion,
   isLoading,
   disableDatabaseFetch = false, // Default to false for backward compatibility
+  disableDepartmentFiltering = false, // Default to false for backward compatibility
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState(initialDepartment || 'ทั้งหมด');
@@ -223,7 +225,7 @@ const KPITable: React.FC<KPITableProps> = ({
     const matchKpiType =
       selectedLevel === 'ทั้งหมด' || item.level === selectedLevel;
     const matchDepartment =
-      selectedDepartment === 'ทั้งหมด' || item.department === selectedDepartment;
+      disableDepartmentFiltering || selectedDepartment === 'ทั้งหมด' || item.department === selectedDepartment;
     
     return matchText && matchStatus && matchKpiType && matchDepartment;
   });

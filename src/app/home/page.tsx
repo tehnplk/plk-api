@@ -473,6 +473,12 @@ export default function HomePage() {
     displayName = session.user.name;
   }
 
+  // Add ssj_department in parentheses if available
+  const ssjDepartment = (session?.user as any)?.ssj_department;
+  if (displayName && ssjDepartment) {
+    displayName = `${displayName} (${ssjDepartment})`;
+  }
+
   if (!mounted) {
     return null;
   }

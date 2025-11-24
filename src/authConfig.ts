@@ -4,6 +4,7 @@ import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
 import LineProvider from "next-auth/providers/line";
+import { cookies } from "next/headers";
 
 
 const authOptions: NextAuthConfig = {
@@ -83,7 +84,18 @@ const authOptions: NextAuthConfig = {
     async jwt({ token, user }: { token: JWT; user?: any }) {
       if (user) {
         token.profile = (user as any).profile;
-        (token as any).ssj_department = (user as any).ssj_department;
+        
+        // Read department from cookie and store in token
+        const cookieStore = await cookies();
+        const department = cookieStore.get('selectedDepartment')?.value;
+        
+        if (department) {
+          (token as any).ssj_department = department;
+          // Clear the cookie after reading it
+          cookieStore.delete('selectedDepartment');
+        } else {
+          (token as any).ssj_department = (user as any).ssj_department;
+        }
       }
       return token;
     },

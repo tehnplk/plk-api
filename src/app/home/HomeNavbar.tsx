@@ -182,14 +182,12 @@ export default function HomeNavbar({
               >
                 <FileText size={16} /> รายการตัวชี้วัด
               </button>
-              <form action={signInWithHealthId}>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-medium cursor-pointer"
-                >
-                  <LogIn size={16} /> เข้าสู่ระบบ
-                </button>
-              </form>
+              <Link
+                href="/login"
+                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-medium cursor-pointer"
+              >
+                <LogIn size={16} /> เข้าสู่ระบบ
+              </Link>
             </>
           )}
         </div>

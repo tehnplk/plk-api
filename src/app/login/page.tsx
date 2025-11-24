@@ -103,6 +103,7 @@ export default function LoginPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {departments.map((name) => (
                 <form key={name} action={signInWithHealthId} className="w-full h-full">
+                  <input type="hidden" name="department" value={name} />
                   <button
                     type="submit"
                     className="w-full h-full min-h-[96px] px-4 py-5 text-left border border-gray-200 rounded-2xl hover:border-green-500 hover:bg-green-50 hover:text-green-700 transition-all group flex flex-col justify-between"

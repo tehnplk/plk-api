@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import type { Session } from 'next-auth';
 import { signOut } from 'next-auth/react';
-import { Activity, LayoutDashboard, LogIn, User, FileText, RefreshCw } from 'lucide-react';
+import { Activity, LayoutDashboard, LogIn, User, FileText, RefreshCw, ChevronDown } from 'lucide-react';
 
 interface HomeNavbarProps {
   moneyYear: number;
@@ -29,10 +29,27 @@ export default function HomeNavbar({
   onDistrictChange,
   districtOptions = []
 }: HomeNavbarProps) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const handleLogout = () => {
     // Perform logout
     signOut({ redirectTo: '/login' });
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const scrollToKpiTable = () => {
     const element = document.getElementById('kpi-table-section');
@@ -94,14 +111,6 @@ export default function HomeNavbar({
             </button>
           )}
 
-          {session && displayName && (
-            <div className="hidden md:flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-3 py-1 text-xs text-blue-700 shadow-sm max-w-[280px]">
-              <User size={14} className="text-blue-600" />
-              <span className="font-semibold text-[11px] md:text-xs truncate">
-                {displayName} ({(session as any)?.user?.ssj_department || ''})
-              </span>
-            </div>
-          )}
           {session ? (
             <>
               <button
@@ -110,12 +119,55 @@ export default function HomeNavbar({
               >
                 <FileText size={16} /> รายการตัวชี้วัด
               </button>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 border border-red-200 px-3 py-1 rounded-full"
-              >
-                <LogIn size={16} /> Logout
-              </button>
+              
+              {/* User Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 transition-colors"
+                >
+                  <User size={16} />
+                  <span className="hidden md:block truncate max-w-[200px]">
+                    {displayName} {((session as any)?.user?.ssj_department || (session as any)?.user?.department) ? `(${(session as any)?.user?.ssj_department || (session as any)?.user?.department})` : ''}
+                  </span>
+                  <ChevronDown 
+                    size={14} 
+                    className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {displayName} {((session as any)?.user?.ssj_department || (session as any)?.user?.department) ? `(${(session as any)?.user?.ssj_department || (session as any)?.user?.department})` : ''}
+                      </p>
+                      {/* Temporary debugging - remove after fixing */}
+                      <p className="text-xs text-gray-400">
+                        Debug: {JSON.stringify((session as any)?.user, null, 1)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        // Profile action - could navigate to profile page
+                        console.log('Profile clicked');
+                      }}
+                      className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <User size={16} />
+                      Profile
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    >
+                      <LogIn size={16} />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <>

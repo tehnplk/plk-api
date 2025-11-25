@@ -55,6 +55,14 @@ export default function Dashboard({
   const [kpiData, setKpiData] = useState<any[]>([]);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [districtData, setDistrictData] = useState<{ name: string; percent: number }[]>([]);
+  const [districtComparisonData, setDistrictComparisonData] = useState<{
+    name: string;
+    pass: number;
+    fail: number;
+    pending: number;
+    total: number;
+  }[]>([]);
 
   const handleRefreshKpis = async () => {
     await loadKpiData(true); // Force refresh
@@ -120,11 +128,27 @@ export default function Dashboard({
     }
   };
 
+  const loadDistrictSummary = async (year: number) => {
+    try {
+      const response = await fetch(`/api/kpi/report/summary?moneyYear=${year}`);
+      if (!response.ok) {
+        console.error('Failed to load district summary');
+        return;
+      }
+      const json = await response.json();
+      setDistrictData(json.districtData || []);
+      setDistrictComparisonData(json.districtComparisonData || []);
+    } catch (error) {
+      console.error('Error loading district summary:', error);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
     // Load KPI data from Google Sheets API
     loadKpiData();
-  }, []);
+    loadDistrictSummary(moneyYear);
+  }, [moneyYear]);
 
   const stats = useMemo(() => {
     // สรุปตัวเลขตามข้อมูลจริงจากฐานข้อมูล kpis
@@ -171,27 +195,6 @@ export default function Dashboard({
       total === 0
         ? "0.0"
         : ((passCount / effectiveDenominator) * 100).toFixed(1);
-
-    // หมายเหตุ: ส่วน chart ด้านล่าง (district / excellence) ยังใช้ข้อมูลจำลองเดิมอยู่
-    // เนื่องจากตาราง kpis ไม่มีมิติอำเภอให้ผูกข้อมูลจริงได้โดยตรง
-
-    const districtData = DISTRICTS.map((d) => ({
-      name: d,
-      percent: Math.floor(Math.random() * 40 + 60),
-    }));
-
-    const districtComparisonData = DISTRICTS.map((d) => {
-      const p = Math.floor(Math.random() * 15) + 5;
-      const f = Math.floor(Math.random() * 5);
-      const pe = Math.floor(Math.random() * 5);
-      return {
-        name: d,
-        pass: p,
-        fail: f,
-        pending: pe,
-        total: p + f + pe,
-      };
-    });
 
     // สรุปตาม 5 Excellence จริงจากข้อมูล kpiData
     const excellenceStats = Object.entries(EXCELLENCE_MAP).map(
@@ -256,7 +259,7 @@ export default function Dashboard({
       districtComparisonData,
       excellenceStats,
     };
-  }, [kpiData, selectedDistrictScope]);
+  }, [kpiData, selectedDistrictScope, districtData, districtComparisonData]);
 
   if (!mounted) {
     return null;

@@ -51,6 +51,7 @@ model KpiReport {
   result_sep Float?
   sum_result String?
   rate       Float?
+  status     String?
   updated_at DateTime @updatedAt
 
   @@id([money_year, area_name, kpi_id])

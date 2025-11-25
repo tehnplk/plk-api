@@ -6,6 +6,7 @@ import { kpiDataCache } from '../../utils/kpiDataCache';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { MONTH_NAMES, MONTH_FIELDS, DISTRICTS } from '@/config/constants';
 import { toast } from 'react-toastify';
+import { getStatusFromCondition } from '@/utils/conditionEvaluator';
 
 interface KPIDetail {
   id: string;
@@ -23,6 +24,7 @@ interface KPIDetail {
   ssj_pm?: string;
   moph_department?: string;
   kpiType?: string;
+  condition?: string;
 }
 
 interface MonthlyData {
@@ -36,6 +38,7 @@ interface DistrictData {
   monthlyValues: (number | null)[];
   total: number;
   rate: number;
+  status: string;
 }
 
 interface KPIDetailModalProps {
@@ -123,6 +126,7 @@ export default function KPIDetailModal({
           ssj_pm: kpiMetadata?.ssj_pm || '',
           moph_department: kpiMetadata?.moph_department || '',
           kpiType: kpiMetadata?.kpi_type || '',
+          condition: kpiMetadata?.condition || '',
         });
 
         // Prepare monthly data for chart and district data for table
@@ -153,16 +157,38 @@ export default function KPIDetailModal({
                 const divideNumber = kpiMetadata?.divide_number !== null && kpiMetadata?.divide_number !== undefined 
                   ? Number(kpiMetadata.divide_number) 
                   : 1;
-                const rate = target && target > 0 
+                const rate = target !== null && target !== undefined && target > 0
                   ? Math.round((total / target) * divideNumber * 100) / 100
                   : 0;
+
+                // คำนวณสถานะแยกรายพื้นที่
+                const conditionStr = (kpiMetadata?.condition ?? '').toString().trim();
+                const targetForStatus = kpiMetadata?.target_result;
+                let status = 'pending';
+
+                if (
+                  target !== null &&
+                  target !== undefined &&
+                  target > 0 &&
+                  conditionStr &&
+                  targetForStatus !== null &&
+                  targetForStatus !== undefined &&
+                  !Number.isNaN(Number(targetForStatus))
+                ) {
+                  status = getStatusFromCondition(
+                    conditionStr,
+                    Number(targetForStatus),
+                    rate
+                  );
+                }
                 
                 return {
                   area_name: record.area_name,
                   target,
                   monthlyValues,
                   total,
-                  rate
+                  rate,
+                  status,
                 };
               });
 
@@ -199,6 +225,7 @@ export default function KPIDetailModal({
             monthlyValues: MONTH_FIELDS.map(() => null),
             total: 0,
             rate: 0,
+            status: 'pending',
           }));
 
           // กราฟว่าง (ไม่มีค่าจริง) แต่โครงสร้างเดือนครบ
@@ -220,6 +247,36 @@ export default function KPIDetailModal({
 
     fetchKPIDetail();
   }, [kpiId, moneyYear, isOpen]);
+
+  // When entering edit mode, focus the first editable cell (first row, target column)
+  useEffect(() => {
+    if (!isOpen || !isEditing || !session || districtData.length === 0) return;
+
+    // Determine first visible area based on current selection and DISTRICTS ordering
+    let firstAreaName: string | undefined;
+    if (selectedArea === 'ทั้งหมด') {
+      const sorted = [...districtData].sort((a, b) => {
+        const aIndex = DISTRICTS.indexOf(a.area_name);
+        const bIndex = DISTRICTS.indexOf(b.area_name);
+        return aIndex - bIndex;
+      });
+      firstAreaName = sorted[0]?.area_name;
+    } else {
+      firstAreaName = selectedArea;
+    }
+
+    if (!firstAreaName) return;
+
+    // Wait for inputs to be rendered in the DOM
+    setTimeout(() => {
+      const selector = `input[data-area="${firstAreaName}"][data-field="target"]`;
+      const firstInput = document.querySelector<HTMLInputElement>(selector);
+      if (firstInput) {
+        firstInput.focus();
+        firstInput.select();
+      }
+    }, 0);
+  }, [isOpen, isEditing, session, districtData, selectedArea]);
 
   // Initialize editable data when district data changes
   useEffect(() => {
@@ -247,6 +304,67 @@ export default function KPIDetailModal({
         [field]: value
       }
     }));
+  };
+
+  const handleCellKeyDown = (
+    areaName: string,
+    field: string,
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (!isEditing) return;
+
+    const key = event.key;
+    if (
+      key !== 'ArrowUp' &&
+      key !== 'ArrowDown' &&
+      key !== 'ArrowLeft' &&
+      key !== 'ArrowRight'
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const columns = ['target', ...MONTH_FIELDS];
+    const currentColIndex = columns.indexOf(field);
+    if (currentColIndex === -1) return;
+
+    let targetArea = areaName;
+    let targetField = field;
+
+    if (key === 'ArrowLeft' || key === 'ArrowRight') {
+      const delta = key === 'ArrowRight' ? 1 : -1;
+      const newColIndex = currentColIndex + delta;
+      if (newColIndex < 0 || newColIndex >= columns.length) return;
+      targetField = columns[newColIndex];
+    } else {
+      const visibleAreas =
+        selectedArea === 'ทั้งหมด'
+          ? [...districtData]
+              .sort((a, b) => {
+                const aIndex = DISTRICTS.indexOf(a.area_name);
+                const bIndex = DISTRICTS.indexOf(b.area_name);
+                return aIndex - bIndex;
+              })
+              .map((d) => d.area_name)
+          : [selectedArea];
+
+      const currentRowIndex = visibleAreas.indexOf(areaName);
+      if (currentRowIndex === -1) return;
+
+      const delta = key === 'ArrowDown' ? 1 : -1;
+      const newRowIndex = currentRowIndex + delta;
+      if (newRowIndex < 0 || newRowIndex >= visibleAreas.length) return;
+
+      targetArea = visibleAreas[newRowIndex];
+    }
+
+    const selector = `input[data-area="${targetArea}"][data-field="${targetField}"]`;
+    const nextInput = document.querySelector<HTMLInputElement>(selector);
+    if (nextInput) {
+      nextInput.focus();
+      nextInput.select();
+    }
   };
 
   // Save changes
@@ -285,9 +403,29 @@ export default function KPIDetailModal({
           const total = monthlyValues.reduce((sum: number, val) => sum + (val || 0), 0);
           
           let rate = 0; // Default to 0 instead of null
-          if (target && target > 0 && total > 0) {
+          if (target !== null && target !== undefined && target > 0) {
             const divideNumber = kpiDetail?.divisionNumber || 1;
             rate = Math.round((total / target) * divideNumber * 100) / 100;
+          }
+
+          // Recompute status per area using same logic as KPITable
+          let status = 'pending';
+          const conditionStr = (kpiDetail?.condition ?? '').toString().trim();
+          const targetForStatus = kpiDetail?.target;
+          if (
+            target !== null &&
+            target !== undefined &&
+            target > 0 &&
+            conditionStr &&
+            targetForStatus !== null &&
+            targetForStatus !== undefined &&
+            !Number.isNaN(Number(targetForStatus))
+          ) {
+            status = getStatusFromCondition(
+              conditionStr,
+              Number(targetForStatus),
+              rate
+            );
           }
           
           return {
@@ -295,7 +433,8 @@ export default function KPIDetailModal({
             target,
             monthlyValues,
             total: total || 0, // Ensure total is never null for DistrictData type
-            rate
+            rate,
+            status,
           };
         }
         return district;
@@ -519,7 +658,7 @@ export default function KPIDetailModal({
                       <table className="w-full text-xs border-collapse">
                         <thead className="bg-gray-50 text-gray-600 uppercase font-medium">
                           <tr>
-                            <th className="px-2 py-2 text-left border border-gray-200">รายพื้นที่</th>
+                            <th className="px-2 py-2 text-left border border-gray-200">พื้นที่</th>
                             <th className="px-2 py-2 text-center border border-gray-200">เป้า</th>
                             {MONTH_NAMES.map((month) => (
                               <th key={month} className="px-2 py-2 text-center border border-gray-200">
@@ -528,6 +667,7 @@ export default function KPIDetailModal({
                             ))}
                             <th className="px-2 py-2 text-center border border-gray-200">รวม</th>
                             <th className="px-2 py-2 text-center border border-gray-200">Rate</th>
+                            <th className="px-2 py-2 text-center border border-gray-200">สถานะ</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -549,6 +689,9 @@ export default function KPIDetailModal({
                                     type="number"
                                     value={editableData[district.area_name]?.target || ''}
                                     onChange={(e) => handleCellChange(district.area_name, 'target', e.target.value)}
+                                    onKeyDown={(e) => handleCellKeyDown(district.area_name, 'target', e)}
+                                    data-area={district.area_name}
+                                    data-field="target"
                                     className="w-16 px-1 py-0.5 text-center border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
                                     placeholder="0"
                                   />
@@ -563,6 +706,9 @@ export default function KPIDetailModal({
                                       type="number"
                                       value={editableData[district.area_name]?.[MONTH_FIELDS[index]] || ''}
                                       onChange={(e) => handleCellChange(district.area_name, MONTH_FIELDS[index], e.target.value)}
+                                      onKeyDown={(e) => handleCellKeyDown(district.area_name, MONTH_FIELDS[index], e)}
+                                      data-area={district.area_name}
+                                      data-field={MONTH_FIELDS[index]}
                                       className="w-16 px-1 py-0.5 text-center border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
                                       placeholder="0"
                                     />
@@ -582,7 +728,26 @@ export default function KPIDetailModal({
                                       ? 'bg-yellow-100 text-yellow-800'
                                       : 'bg-red-100 text-red-800'
                                 }`}>
-                                  {district.rate > 0 ? district.rate.toFixed(2) : '-'}
+                                  {district.target !== null && district.target !== undefined && district.target > 0
+                                    ? district.rate.toFixed(2)
+                                    : '-'}
+                                </span>
+                              </td>
+                              <td className="px-2 py-2 text-center border border-gray-200 text-xs">
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                    district.status === 'pass'
+                                      ? 'bg-green-100 text-green-800'
+                                      : district.status === 'fail'
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-gray-100 text-gray-700'
+                                  }`}
+                                >
+                                  {district.status === 'pass'
+                                    ? 'ผ่าน'
+                                    : district.status === 'fail'
+                                      ? 'ไม่ผ่าน'
+                                      : 'รอประเมิน'}
                                 </span>
                               </td>
                             </tr>
@@ -604,6 +769,24 @@ export default function KPIDetailModal({
                             const summaryRate = totalTarget > 0 
                               ? Math.round((grandTotal / totalTarget) * divideNumber * 100) / 100
                               : 0;
+
+                            // Compute overall summary status using same logic as per-area rows
+                            let summaryStatus: 'pass' | 'fail' | 'pending' = 'pending';
+                            const conditionStr = (kpiDetail?.condition ?? '').toString().trim();
+                            const targetForStatus = kpiDetail?.target;
+                            if (
+                              totalTarget > 0 &&
+                              conditionStr &&
+                              targetForStatus !== null &&
+                              targetForStatus !== undefined &&
+                              !Number.isNaN(Number(targetForStatus))
+                            ) {
+                              summaryStatus = getStatusFromCondition(
+                                conditionStr,
+                                Number(targetForStatus),
+                                summaryRate
+                              );
+                            }
                             
                             return (
                               <tr className="bg-gray-100 font-bold">
@@ -629,7 +812,24 @@ export default function KPIDetailModal({
                                         ? 'bg-yellow-100 text-yellow-800'
                                         : 'bg-red-100 text-red-800'
                                   }`}>
-                                    {summaryRate > 0 ? summaryRate.toFixed(2) : '-'}
+                                    {totalTarget > 0 ? summaryRate.toFixed(2) : '-'}
+                                  </span>
+                                </td>
+                                <td className="px-2 py-2 text-center border border-gray-200 text-xs">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                      summaryStatus === 'pass'
+                                        ? 'bg-green-100 text-green-800'
+                                        : summaryStatus === 'fail'
+                                          ? 'bg-red-100 text-red-800'
+                                          : 'bg-gray-100 text-gray-700'
+                                    }`}
+                                  >
+                                    {summaryStatus === 'pass'
+                                      ? 'ผ่าน'
+                                      : summaryStatus === 'fail'
+                                        ? 'ไม่ผ่าน'
+                                        : 'รอประเมิน'}
                                   </span>
                                 </td>
                               </tr>

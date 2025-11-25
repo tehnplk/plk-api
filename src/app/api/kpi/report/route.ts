@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
+import { getStatusFromCondition } from '@/utils/conditionEvaluator';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,15 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Load KPI metadata for condition/target to compute status
+    const kpiMeta = await prisma.kpis.findUnique({
+      where: { id: kpiId },
+      select: {
+        condition: true,
+        target_result: true,
+      },
+    });
 
     // Prepare data for database
     const savePromises = Object.entries(editableData).map(async ([areaName, data]: [string, any]) => {
@@ -33,10 +43,38 @@ export async function POST(request: NextRequest) {
       
       // Calculate rate
       let rate = 0; // Default to 0 instead of null
-      if (target && target > 0 && total > 0) {
+      if (target !== null && target !== undefined && target > 0) {
         const divideNumber = divisionNumber || 1;
         rate = Math.round((total / target) * divideNumber * 100) / 100;
       }
+
+      // Compute evaluation status using same logic as KPITable
+      let statusCode: 'pass' | 'fail' | 'pending' = 'pending';
+      const conditionStr = (kpiMeta?.condition ?? '').toString().trim();
+      const targetForStatus = kpiMeta?.target_result;
+
+      if (
+        target !== null &&
+        target !== undefined &&
+        target > 0 &&
+        conditionStr &&
+        targetForStatus !== null &&
+        targetForStatus !== undefined &&
+        !Number.isNaN(Number(targetForStatus))
+      ) {
+        statusCode = getStatusFromCondition(
+          conditionStr,
+          Number(targetForStatus),
+          rate,
+        );
+      }
+
+      const status =
+        statusCode === 'pass'
+          ? 'ผ่าน'
+          : statusCode === 'fail'
+            ? 'ไม่ผ่าน'
+            : 'รอประเมิน';
       
       // Upsert data to KpiReport table
       return prisma.kpiReport.upsert({
@@ -63,7 +101,8 @@ export async function POST(request: NextRequest) {
           result_aug: monthlyResults[10],
           result_sep: monthlyResults[11],
           sum_result: total > 0 ? total.toString() : null,
-          rate: rate // rate is now never null
+          rate: rate, // rate is now never null
+          status,
         },
         create: {
           money_year: moneyYear,
@@ -84,7 +123,8 @@ export async function POST(request: NextRequest) {
           result_aug: monthlyResults[10],
           result_sep: monthlyResults[11],
           sum_result: total > 0 ? total.toString() : null,
-          rate: rate // rate is now never null
+          rate: rate, // rate is now never null
+          status,
         }
       });
     });
@@ -146,7 +186,8 @@ export async function GET(request: NextRequest) {
       result_aug: report.result_aug,
       result_sep: report.result_sep,
       sum_result: report.sum_result,
-      rate: report.rate
+      rate: report.rate,
+      status: report.status,
     }));
 
     return NextResponse.json({ reports: transformedReports });

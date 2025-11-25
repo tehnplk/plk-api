@@ -180,8 +180,13 @@ export default function HomePage() {
   // Add ssj_department in parentheses if available
   const ssjDepartment = (session?.user as any)?.ssj_department;
   
+  console.log('🏠 HOME PAGE - Session data:', session);
+  console.log('🏠 HOME PAGE - ssj_department:', ssjDepartment);
+  console.log('🏠 HOME PAGE - User object:', session?.user);
+  
   if (displayName && ssjDepartment) {
     displayName = `${displayName} (${ssjDepartment})`;
+    console.log('🏠 HOME PAGE - Display name with department:', displayName);
   }
 
   if (!mounted) {

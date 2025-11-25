@@ -83,6 +83,8 @@ const authOptions: NextAuthConfig = {
   callbacks: {
     async jwt({ token, user }: { token: JWT; user?: any }) {
       if (user) {
+        console.log('🟢 LOGIN SUCCESSFUL - User authenticated:', user.name);
+        
         token.profile = (user as any).profile;
         
         // Read department from cookie and store in token
@@ -95,11 +97,13 @@ const authOptions: NextAuthConfig = {
         if (department) {
           (token as any).ssj_department = department;
           console.log('Debug JWT - set ssj_department:', department);
+          console.log('✅ LOGIN COMPLETE - Department set:', department, 'for user:', user.name);
           // Clear the cookie after reading it
           cookieStore.delete('selectedDepartment');
         } else {
           (token as any).ssj_department = (user as any).ssj_department;
           console.log('Debug JWT - using fallback ssj_department:', (user as any).ssj_department);
+          console.log('✅ LOGIN COMPLETE - Using fallback department:', (user as any).ssj_department, 'for user:', user.name);
         }
       }
       return token;
@@ -108,6 +112,7 @@ const authOptions: NextAuthConfig = {
       if (token && session.user) {
         (session.user as any).profile = (token as any).profile; // Add user profile to the session
         (session.user as any).ssj_department = (token as any).ssj_department;
+        console.log('🟢 SESSION CREATED - User session ready:', session.user.name, 'Department:', (session.user as any).ssj_department);
       }
       return session;
     },

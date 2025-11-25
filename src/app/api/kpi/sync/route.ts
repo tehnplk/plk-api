@@ -135,8 +135,6 @@ export async function POST(request: NextRequest) {
       message: errorMessage,
       error: String(error),
     }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -168,7 +166,5 @@ export async function GET(request: NextRequest) {
       message: 'Failed to get sync status',
       error: String(error),
     }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }

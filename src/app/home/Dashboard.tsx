@@ -129,17 +129,29 @@ export default function Dashboard({
     }
   };
 
-  const loadDistrictSummary = async (year: number) => {
+  const loadDistrictSummary = async (year: number, retryCount = 0) => {
     try {
       const response = await fetch(`/api/kpi/report/summary?moneyYear=${year}`);
       if (!response.ok) {
-        console.error('Failed to load district summary');
+        // Retry up to 2 times with delay if initial load fails
+        if (retryCount < 2) {
+          console.warn(`District summary load failed (attempt ${retryCount + 1}), retrying...`);
+          await new Promise((resolve) => setTimeout(resolve, 500 * (retryCount + 1)));
+          return loadDistrictSummary(year, retryCount + 1);
+        }
+        console.error('Failed to load district summary after retries');
         return;
       }
       const json = await response.json();
       setDistrictData(json.districtData || []);
       setDistrictComparisonData(json.districtComparisonData || []);
     } catch (error) {
+      // Retry on network errors
+      if (retryCount < 2) {
+        console.warn(`District summary error (attempt ${retryCount + 1}), retrying...`);
+        await new Promise((resolve) => setTimeout(resolve, 500 * (retryCount + 1)));
+        return loadDistrictSummary(year, retryCount + 1);
+      }
       console.error('Error loading district summary:', error);
     }
   };

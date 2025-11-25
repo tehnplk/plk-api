@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileText, Search, Save, TrendingUp, RotateCcw, Download, RefreshCw } from 'lucide-react';
+import { FileText, Search, TrendingUp, RotateCcw, Download, RefreshCw } from 'lucide-react';
 import KPIDetailModal from './KPIDetailModal';
 import { getStatusFromCondition } from '@/utils/conditionEvaluator';
 import { EXCELLENCE_MAP } from '@/constants/excellence';
@@ -74,8 +74,6 @@ interface KPITableProps {
   data?: KPIItem[];
   initialDepartment?: string;
   hideDepartmentFilter?: boolean;
-  showActionColumn?: boolean;
-  onActionClick?: (kpi: KPIItem) => void;
   showHeaderSummary?: boolean;
   showRowCountSummary?: boolean;
   moneyYear?: number;
@@ -90,8 +88,6 @@ const KPITable: React.FC<KPITableProps> = ({
   data,
   initialDepartment,
   hideDepartmentFilter,
-  showActionColumn,
-  onActionClick,
   showHeaderSummary,
   showRowCountSummary,
   moneyYear = 2569,
@@ -373,26 +369,38 @@ const KPITable: React.FC<KPITableProps> = ({
   const mophCount = filteredData.filter((item: KPIItem) => item.kpiType === 'KPR').length;
   const provinceCount = totalCount - mophCount;
 
-  const totalColumns = showActionColumn ? 11 : 10;
+  const totalColumns = 9;
 
   const getStatusBadge = (kpi: KPIItem) => {
     const evaluatedStatus = getEvaluatedStatus(kpi);
 
-    switch (evaluatedStatus) {
-      case 'pass':
-        return (
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500" title="ผ่าน"></span>
-        );
-      case 'fail':
-        return (
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500" title="ไม่ผ่าน"></span>
-        );
-      case 'pending':
-      default:
-        return (
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-500" title="รอประเมิน"></span>
-        );
+    if (evaluatedStatus === 'pass') {
+      return (
+        <span
+          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200"
+        >
+          ผ่าน
+        </span>
+      );
     }
+
+    if (evaluatedStatus === 'fail') {
+      return (
+        <span
+          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200"
+        >
+          ไม่ผ่าน
+        </span>
+      );
+    }
+
+    return (
+      <span
+        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200"
+      >
+        รอ...
+      </span>
+    );
   };
 
   const handleSort = (key: 'id' | 'name' | 'criteria' | 'level' | 'department') => {
@@ -465,9 +473,9 @@ const KPITable: React.FC<KPITableProps> = ({
             onChange={(e) => setSelectedStatus(e.target.value as 'ทั้งหมด' | KPIStatus)}
           >
             <option value="ทั้งหมด">สถานะทั้งหมด</option>
-            <option value="pass">🟢 ผ่าน</option>
-            <option value="fail">🔴 ไม่ผ่าน</option>
-            <option value="pending">🟡 รอประเมิน</option>
+            <option value="pass">ผ่าน</option>
+            <option value="fail">ไม่ผ่าน</option>
+            <option value="pending">รอประเมิน</option>
           </select>
           <button
             onClick={handleClearFilters}
@@ -559,13 +567,9 @@ const KPITable: React.FC<KPITableProps> = ({
                 </button>
               </th>
               <th className="px-6 py-4 text-center">ผลงาน</th>
-              <th className="px-6 py-4 text-center">เกรด</th>
               <th className="px-6 py-4 text-center">สถานะ</th>
               <th className="px-6 py-4 text-center">รายละเอียด</th>
               <th className="px-6 py-4 text-center">อัพเดทล่าสุด</th>
-              {showActionColumn && (
-                <th className="px-6 py-4 text-center">Action</th>
-              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 relative">
@@ -635,23 +639,6 @@ const KPITable: React.FC<KPITableProps> = ({
                     )}
                   </td>
                   <td className="px-6 py-4 text-center">
-                    {kpi.grade ? (
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          kpi.grade === 'ผ่าน' 
-                            ? 'bg-green-100 text-green-800 border border-green-200'
-                            : kpi.grade === 'ไม่ผ่าน'
-                            ? 'bg-red-100 text-red-800 border border-red-200'
-                            : 'bg-gray-100 text-gray-600 border border-gray-200'
-                        }`}
-                      >
-                        {kpi.grade}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 text-xs">-</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-center">
                     {getStatusBadge(kpi)}
                   </td>
                   <td className="px-6 py-4 text-center">
@@ -670,18 +657,6 @@ const KPITable: React.FC<KPITableProps> = ({
                   <td className="px-6 py-4 text-center text-xs text-gray-500 whitespace-nowrap">
                     {kpi.lastUpdated || '-'}
                   </td>
-                  {showActionColumn && (
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center rounded-full border border-green-200 text-green-600 hover:bg-green-50 px-3 py-1 text-xs font-medium"
-                        title="บันทึกข้อมูลตัวชี้วัดนี้"
-                        onClick={() => onActionClick && onActionClick(kpi)}
-                      >
-                        <Save size={14} className="mr-1" /> บันทึก
-                      </button>
-                    </td>
-                  )}
                 </tr>
               ))}
             {!loading && !error && filteredData.length > 0 && (

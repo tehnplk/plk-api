@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Prepare data for database
+    // Prepare data for database (DB only; sync to sheet is handled in a separate endpoint)
     const savePromises = Object.entries(editableData).map(async ([areaName, data]: [string, any]) => {
       const target = parseFloat(data.target) || null;
       const monthlyResults = [

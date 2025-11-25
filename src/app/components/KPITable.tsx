@@ -687,6 +687,7 @@ const KPITable: React.FC<KPITableProps> = ({
           onClose={() => {
             setModalOpen(false);
             setSelectedKpiId(null);
+            fetchDataFromDatabase();
           }}
           kpiId={selectedKpiId}
           moneyYear={moneyYear}

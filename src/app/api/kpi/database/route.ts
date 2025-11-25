@@ -79,3 +79,41 @@ export async function GET(request: NextRequest) {
     await prisma.$disconnect();
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const { id, sum_result } = await request.json();
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'id is required' },
+        { status: 400 }
+      );
+    }
+
+    const updated = await prisma.kpis.update({
+      where: { id },
+      data: {
+        sum_result: sum_result != null ? String(sum_result) : null,
+        last_synced_at: new Date(),
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: updated.id,
+        sum_result: updated.sum_result,
+        last_synced_at: updated.last_synced_at,
+      },
+    });
+  } catch (error) {
+    console.error('Error updating KPI master data:', error);
+    return NextResponse.json(
+      { error: 'Failed to update KPI master data' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}

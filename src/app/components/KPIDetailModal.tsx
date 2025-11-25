@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Calendar, TrendingUp, Target, Users, Award, Building, Save } from 'lucide-react';
+import { X, FileText, Calendar, TrendingUp, Target, Users, Award, Building, Save, RefreshCw } from 'lucide-react';
 import { kpiDataCache } from '../../utils/kpiDataCache';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { MONTH_NAMES, MONTH_FIELDS, DISTRICTS } from '@/config/constants';
@@ -64,6 +64,7 @@ export default function KPIDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [editableData, setEditableData] = useState<Record<string, Record<string, string>>>({});
   const [isEditing, setIsEditing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -367,6 +368,49 @@ export default function KPIDetailModal({
     }
   };
 
+  const handleSyncToSheet = async () => {
+    if (!kpiDetail) return;
+
+    try {
+      setSyncing(true);
+
+      const res = await fetch('/api/kpi/report/sync-sheet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          moneyYear,
+          kpiId,
+          kpiName: kpiDetail.name,
+        }),
+      });
+
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+
+      if (!res.ok || (data && data.success === false)) {
+        console.error('Failed to sync kpi_report to Google Sheets data sheet', {
+          status: res.status,
+          body: data,
+        });
+        toast.error('Sync ข้อมูลขึ้น Google Sheet (ชีท data) ไม่สำเร็จ');
+        return;
+      }
+
+      toast.success('Sync ข้อมูลขึ้น Google Sheet (ชีท data) สำเร็จ');
+    } catch (err) {
+      console.error('Error syncing kpi_report to Google Sheets data sheet:', err);
+      toast.error('เกิดข้อผิดพลาดระหว่าง Sync ข้อมูลขึ้น Google Sheet');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   // Save changes
   const handleSave = async () => {
     try {
@@ -455,6 +499,82 @@ export default function KPIDetailModal({
 
       setDistrictData(updatedDistrictData);
       setMonthlyData(aggregatedMonthlyData);
+
+      const totalTarget = updatedDistrictData.reduce((sum, d) => sum + (d.target || 0), 0);
+      const grandTotal = updatedDistrictData.reduce((sum, d) => sum + d.total, 0);
+      const divideNumber = kpiDetail?.divideNumber || 1;
+      const summaryRate = totalTarget > 0
+        ? Math.round((grandTotal / totalTarget) * divideNumber * 100) / 100
+        : 0;
+
+      let summaryStatus: 'pass' | 'fail' | 'pending' = 'pending';
+      const conditionStr = (kpiDetail?.condition ?? '').toString().trim();
+      const targetForStatus = kpiDetail?.target;
+      if (
+        totalTarget > 0 &&
+        conditionStr &&
+        targetForStatus !== null &&
+        targetForStatus !== undefined &&
+        !Number.isNaN(Number(targetForStatus))
+      ) {
+        summaryStatus = getStatusFromCondition(
+          conditionStr,
+          Number(targetForStatus),
+          summaryRate
+        );
+      }
+
+      if (kpiDetail?.id) {
+        try {
+          // 1) Update KPI master table (kpis)
+          const dbRes = await fetch('/api/kpi/database', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: kpiDetail.id,
+              sum_result: summaryRate,
+            }),
+          });
+
+          if (!dbRes.ok) {
+            console.error('Failed to update KPI master data before syncing to Google Sheets');
+            toast.error('บันทึกฐานข้อมูลรายพื้นที่สำเร็จ แต่บันทึกค่ารวมในตาราง KPI ไม่สำเร็จ');
+            return;
+          }
+
+          // 2) Sync KPI summary to Google Sheets
+          const sheetRes = await fetch('/api/kpi/sheet', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: kpiDetail.id,
+              sum_result: summaryRate,
+              summary_status: summaryStatus,
+            }),
+          });
+
+          if (!sheetRes.ok) {
+            let sheetJson: any = null;
+            try {
+              sheetJson = await sheetRes.json();
+            } catch (e) {
+              sheetJson = null;
+            }
+            console.error('Failed to sync KPI summary to Google Sheets', {
+              status: sheetRes.status,
+              body: sheetJson,
+            });
+            toast.warning('บันทึกฐานข้อมูลสำเร็จ แต่ sync ข้อมูลไป Google Sheets ไม่สำเร็จ');
+          }
+        } catch (sheetError) {
+          console.error('Error syncing KPI summary to Google Sheets:', sheetError);
+          toast.warning('บันทึกฐานข้อมูลสำเร็จ แต่ไม่สามารถเชื่อมต่อ Google Sheets ได้');
+        }
+      }
       setIsEditing(false);
       
       // Show success message via toast (no item count)
@@ -507,14 +627,25 @@ export default function KPIDetailModal({
             {session && districtData.length > 0 && (
               <>
                 {!isEditing ? (
-                  <button
-                    type="button"
-                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-1"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    <FileText size={14} />
-                    แก้ไขข้อมูล
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <FileText size={14} />
+                      แก้ไขข้อมูล
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 flex items-center gap-1"
+                      onClick={handleSyncToSheet}
+                      disabled={syncing}
+                    >
+                      <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+                      {syncing ? 'Syncing...' : 'Sync Sheet'}
+                    </button>
+                  </>
                 ) : (
                   <>
                     <button

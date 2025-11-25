@@ -41,6 +41,38 @@ async function testGoogleAppsScriptEndpoint() {
   }
 }
 
+// Fetch sheet "data" and write JSON to test/data.json
+async function exportDataSheetToJson() {
+  try {
+    console.log('Exporting sheet "data" from Google Apps Script endpoint...');
+    console.log('URL:', ENDPOINT_URL);
+
+    const upstreamUrl = `${ENDPOINT_URL}?sheet=data`;
+    const response = await fetch(upstreamUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Success! DATA sheet response:', data);
+
+    const outputPath = join(__dirname, '..', 'test', 'data.json');
+    writeFileSync(outputPath, JSON.stringify(data, null, 2), 'utf8');
+    console.log('DATA sheet saved to:', outputPath);
+
+    return data;
+  } catch (error) {
+    console.error('Error exporting DATA sheet:', error);
+    throw error;
+  }
+}
+
 // Test with POST request
 async function testGoogleAppsScriptEndpointPost() {
   try {
@@ -81,6 +113,10 @@ async function runTests() {
     // Test GET request
     await testGoogleAppsScriptEndpoint();
     console.log('\n');
+
+    // Export DATA sheet to JSON
+    await exportDataSheetToJson();
+    console.log('\n');
     
     // Test POST request
     await testGoogleAppsScriptEndpointPost();
@@ -98,4 +134,4 @@ if (require.main === module) {
   runTests();
 }
 
-export { testGoogleAppsScriptEndpoint, testGoogleAppsScriptEndpointPost, runTests };
+export { testGoogleAppsScriptEndpoint, testGoogleAppsScriptEndpointPost, exportDataSheetToJson, runTests };

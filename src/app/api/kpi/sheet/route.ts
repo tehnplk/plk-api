@@ -134,3 +134,66 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    if (!ENDPOINT_URL) {
+      return NextResponse.json(
+        { error: 'Google Sheets ENDPOINT_URL is not configured' },
+        { status: 500 }
+      );
+    }
+
+    const { id, sum_result, summary_status } = await request.json();
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'id is required' },
+        { status: 400 }
+      );
+    }
+
+    const upstreamUrl = `${ENDPOINT_URL}?sheet=kpi&action=update_sum`;
+
+    const response = await fetch(upstreamUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id,
+        sum_result,
+        summary_status,
+      }),
+    });
+
+    let data: any = null;
+    try {
+      data = await response.json();
+    } catch {
+      // ignore JSON parsing error from upstream
+    }
+
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          error: 'Failed to update KPI in Google Sheets',
+          status: response.status,
+          data,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('Error updating KPI in Google Sheets:', error);
+    return NextResponse.json(
+      { error: 'Failed to update KPI in Google Sheets' },
+      { status: 500 }
+    );
+  }
+}

@@ -26,6 +26,12 @@ interface AccountUser {
   updated_at: string;
 }
 
+interface Department {
+  id: string;
+  name: string;
+  activate: boolean;
+}
+
 const THEME = {
   primary: "#00A651",
   secondary: "#A3D9A5",
@@ -42,6 +48,7 @@ const THEME = {
 
 export default function AccountPage() {
   const [users, setUsers] = useState<AccountUser[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [editingUser, setEditingUser] = useState<AccountUser | null>(null);
@@ -70,9 +77,22 @@ export default function AccountPage() {
     }
   }, [search]);
 
+  const fetchDepartments = useCallback(async () => {
+    try {
+      const res = await fetch("/api/department");
+      const data = await res.json();
+      if (data.success) {
+        setDepartments(data.data.filter((d: Department) => d.activate));
+      }
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchDepartments();
+  }, [fetchUsers, fetchDepartments]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -400,17 +420,23 @@ export default function AccountPage() {
 
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: THEME.textMain }}>
-                      Department
+                      กลุ่มงาน
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={editingUser.department || ""}
                       onChange={(e) =>
                         setEditingUser({ ...editingUser, department: e.target.value || null })
                       }
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
                       style={{ borderColor: THEME.secondary }}
-                    />
+                    >
+                      <option value="">-- เลือกกลุ่มงาน --</option>
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>

@@ -110,10 +110,38 @@ export async function POST(request: NextRequest) {
     
     console.log(`Successfully synced ${results.length} KPI records to database`);
     
+    // Sync departments from unique ssj_department values
+    console.log('Syncing departments...');
+    
+    // Truncate department table first
+    await prisma.department.deleteMany({});
+    console.log('Truncated department table');
+    
+    const uniqueDepartments = [...new Set(
+      transformedData
+        .map((kpi) => kpi.ssj_department)
+        .filter((dept) => dept && dept.trim() !== '')
+    )];
+    
+    let departmentCount = 0;
+    for (const deptName of uniqueDepartments) {
+      await prisma.department.create({
+        data: {
+          id: deptName,
+          name: deptName,
+          activate: true,
+        },
+      });
+      departmentCount++;
+    }
+    
+    console.log(`Successfully synced ${departmentCount} departments to database`);
+    
     return NextResponse.json({
       success: true,
-      message: 'KPI metadata synced successfully',
+      message: 'KPI metadata and departments synced successfully',
       count: results.length,
+      departmentCount,
       lastSyncedAt: new Date(),
       source: 'google_sheets'
     });

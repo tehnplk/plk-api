@@ -85,3 +85,11 @@ model AccountUser {
   @@index([hospital_code])
   @@map("account_user")
 }
+
+model Department {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  activate Boolean @default(true)
+
+  @@map("department")
+}

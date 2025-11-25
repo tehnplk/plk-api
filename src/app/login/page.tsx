@@ -15,6 +15,29 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchDepartments = async () => {
+    try {
+      setLoading(true);
+      
+      // Use database instead of localStorage
+      const rows = await kpiDataCache.loadData();
+
+      const set = new Set<string>();
+      rows.forEach((item: any) => {
+        const dept = String(item.ssj_department ?? '').trim();
+        if (dept) set.add(dept);
+      });
+      const list = Array.from(set);
+      setDepartments(list);
+      
+    } catch (error) {
+      console.error('Failed to fetch departments:', error);
+      setError('ไม่สามารถดึงข้อมูลแผนกได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     // ถ้า login แล้ว ให้ redirect ไป /home ทันที
     if (status === 'authenticated') {
@@ -22,62 +45,7 @@ export default function LoginPage() {
       return;
     }
 
-    const fetchDepartments = async () => {
-      try {
-        setLoading(true);
-        
-        // Use cache instead of direct API call
-        const cachedData = kpiDataCache.getCachedData();
-        let rows = [];
-        
-        if (cachedData) {
-          rows = cachedData;
-        } else {
-          // Cache miss, fetch and cache
-          rows = await kpiDataCache.loadData();
-        }
-
-        const set = new Set<string>();
-        rows.forEach((item: any) => {
-          const dept = String(item.ssj_department ?? '').trim();
-          if (dept) set.add(dept);
-        });
-        const list = Array.from(set);
-        setDepartments(list);
-        if (typeof window !== 'undefined') {
-          try {
-            window.localStorage.setItem('cachedDepartments', JSON.stringify(list));
-          } catch {
-          }
-        }
-      } catch (e: any) {
-        setError(e?.message || 'โหลดข้อมูลกลุ่มงานไม่สำเร็จ');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    let usedCache = false;
-    if (typeof window !== 'undefined') {
-      try {
-        const raw = window.localStorage.getItem('cachedDepartments');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setDepartments(parsed.map((x: any) => String(x)));
-            setLoading(false);
-            usedCache = true;
-          }
-        }
-      } catch {
-      }
-    }
-
-    if (usedCache) {
-      return;
-    }
-
-    // ยังโหลดรายชื่อกลุ่มงานตามปกติ ในกรณีที่ยังไม่ได้ login
+    // โหลดรายชื่อกลุ่มงานจากฐานข้อมูล
     fetchDepartments();
   }, [status, router]);
 

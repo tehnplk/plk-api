@@ -1,6 +1,3 @@
-// Prisma schema for KPI report table (SQLite)
-// learn more: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,57 +6,53 @@ datasource db {
   provider = "sqlite"
 }
 
-// ตารางเก็บข้อมูลตัวชี้วัดจาก Google Sheets API
 model Kpis {
-  id                String    @id
-  name              String
+  id                  String   @id
+  name                String
   evaluation_criteria String
-  condition         String
-  target_result     Float
-  divide_number     Float
-  sum_result        String?
-  excellence        String
-  area_level        String
-  ssj_department    String
-  ssj_pm            String?
-  moph_department   String?
-  is_moph_kpi       String
-  last_synced_at    DateTime  @default(now())
-  created_at        DateTime  @default(now())
-  updated_at        DateTime  @updatedAt
+  condition           String
+  target_result       Float
+  divide_number       Float
+  sum_result          String?
+  excellence          String
+  area_level          String
+  ssj_department      String
+  ssj_pm              String?
+  moph_department     String?
+  kpi_type            String
+  grade               String?
+  template_url        String?
+  last_synced_at      DateTime @default(now())
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
 
-  @@index([ssj_department, area_level]) // สำหรับการกรองตามแผนกและพื้นที่
+  @@index([ssj_department, area_level])
+  @@index([kpi_type])
   @@map("kpis")
 }
 
-// ตารางเก็บข้อมูลรายงาน KPI ตามปีงบประมาณ / พื้นที่ / ตัวชี้วัด
 model KpiReport {
-  money_year Int    // ปีงบประมาณ (PK)
-  area_name  String // ชื่อพื้นที่/อำเภอ/เขต (PK)
-  kpi_id     String // รหัส KPI (PK)
+  money_year Int
+  area_name  String
+  kpi_id     String
+  kpi_name   String
+  kpi_target Float?
+  result_oct Float?
+  result_nov Float?
+  result_dec Float?
+  result_jan Float?
+  result_feb Float?
+  result_mar Float?
+  result_apr Float?
+  result_may Float?
+  result_jun Float?
+  result_jul Float?
+  result_aug Float?
+  result_sep Float?
+  sum_result String?
+  rate       Float?
+  updated_at DateTime @updatedAt
 
-  kpi_name   String        // ชื่อ KPI
-  kpi_target Float?        // ค่าเป้าหมาย
-
-  // ผลงานรายเดือน ปีงบประมาณ ต.ค. - ก.ย.
-  result_oct Float?        // ตุลาคม
-  result_nov Float?        // พฤศจิกายน
-  result_dec Float?        // ธันวาคม
-  result_jan Float?        // มกราคม
-  result_feb Float?        // กุมภาพันธ์
-  result_mar Float?        // มีนาคม
-  result_apr Float?        // เมษายน
-  result_may Float?        // พฤษภาคม
-  result_jun Float?        // มิถุนายน
-  result_jul Float?        // กรกฎาคม
-  result_aug Float?        // สิงหาคม
-  result_sep Float?        // กันยายน
-
-  sum_result String?        // ผลรวมผลงาน
-  rate        Float?        // อัตราผลงาน
-
-  updated_at  DateTime @updatedAt // วันที่อัปเดตล่าสุด
-
-  @@id([money_year, area_name, kpi_id])  // composite primary key
-  @@map("kpi_report")                   // ชื่อตารางจริงใน SQLite
+  @@id([money_year, area_name, kpi_id])
+  @@map("kpi_report")
 }

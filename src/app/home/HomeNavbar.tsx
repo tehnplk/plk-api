@@ -14,6 +14,8 @@ interface HomeNavbarProps {
   onRefresh?: () => void;
   showRefreshButton?: boolean;
   isRefreshing?: boolean;
+  onSync?: () => void;
+  isSyncing?: boolean;
   selectedDistrict?: string;
   onDistrictChange?: (district: string) => void;
   districtOptions?: string[];
@@ -26,6 +28,8 @@ export default function HomeNavbar({
   onRefresh, 
   showRefreshButton = false, 
   isRefreshing = false,
+  onSync,
+  isSyncing = false,
   selectedDistrict,
   onDistrictChange,
   districtOptions = []
@@ -98,15 +102,16 @@ export default function HomeNavbar({
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Refresh Button */}
-          {showRefreshButton && onRefresh && (
+          {/* Sync Button */}
+          {onSync && (
             <button 
-              onClick={onRefresh}
-              disabled={isRefreshing}
+              onClick={onSync}
+              disabled={isSyncing}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="ซิงค์ข้อมูลจาก Google Sheets"
             >
-              <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-              {isRefreshing ? 'กำลังโหลด...' : 'รีเฟรชข้อมูล'}
+              <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+              {isSyncing ? 'กำลังซิงค์...' : 'ซิงค์ข้อมูล'}
             </button>
           )}
 

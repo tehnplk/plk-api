@@ -17,6 +17,12 @@ interface KPIDetail {
   target: number | null;
   divideNumber: number | null;
   lastUpdated: string | null;
+  grade?: string;
+  template_url?: string;
+  excellence?: string;
+  ssj_pm?: string;
+  moph_department?: string;
+  kpiType?: string;
 }
 
 interface MonthlyData {
@@ -59,22 +65,13 @@ export default function KPIDetailPage() {
         setLoading(true);
         setError(null);
 
-        // First, fetch KPI metadata from cache
+        // First, fetch KPI metadata from database
         let kpiMetadata = null;
         try {
-          const cachedData = kpiDataCache.getCachedData();
-          let allKpis = [];
-          
-          if (cachedData) {
-            allKpis = cachedData;
-          } else {
-            // Cache miss, fetch and cache
-            allKpis = await kpiDataCache.loadData();
-          }
-          
+          const allKpis = await kpiDataCache.loadData();
           kpiMetadata = allKpis.find((kpi: any) => String(kpi.id) === kpiId);
         } catch (err) {
-          console.warn('Failed to fetch KPI metadata from cache:', err);
+          console.warn('Failed to fetch KPI metadata from database:', err);
         }
 
         // Mockup mode - no database fetching
@@ -115,6 +112,12 @@ export default function KPIDetailPage() {
           target: kpiMetadata?.target_result || null,
           divideNumber: kpiMetadata?.divide_number || null,
           lastUpdated: new Date().toISOString(),
+          grade: kpiMetadata?.grade || '',
+          template_url: kpiMetadata?.template_url || '',
+          excellence: kpiMetadata?.excellence || '',
+          ssj_pm: kpiMetadata?.ssj_pm || '',
+          moph_department: kpiMetadata?.moph_department || '',
+          kpiType: kpiMetadata?.kpi_type || '',
         });
 
         // Prepare monthly data for chart and district data for table

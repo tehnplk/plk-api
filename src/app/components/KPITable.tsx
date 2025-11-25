@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileText, Search, Save, TrendingUp, RotateCcw } from 'lucide-react';
-import { kpiDataCache } from '../../utils/kpiDataCache';
+import { FileText, Search, Save, TrendingUp, RotateCcw, Download, RefreshCw } from 'lucide-react';
 import KPIDetailModal from './KPIDetailModal';
 import { getStatusFromCondition } from '@/utils/conditionEvaluator';
+import { EXCELLENCE_MAP } from '@/constants/excellence';
+import * as XLSX from 'xlsx';
 
 type KPIStatus = 'pass' | 'fail' | 'pending';
 
@@ -22,35 +23,31 @@ const getKpiTypeLabel = (type: string) => {
 };
 
 const getEvaluatedStatus = (kpi: KPIItem): KPIStatus => {
-  // Simple status evaluation using sum_result, condition, and target_result
-  if (!kpi.result || kpi.result === '0') {
+  // ใช้ util กลางในการประเมิน ผ่าน / ไม่ผ่าน / รอประเมิน
+  const condition = (kpi.condition ?? '').toString().trim();
+
+  // ถ้าไม่มี condition เลย ให้ถือว่ายังรอประเมิน
+  if (!condition) {
     return 'pending';
   }
 
-  // Evaluate condition: sum_result [condition] target_result
-  const sumResult = parseFloat(kpi.result || '0');
-  const targetResult = parseFloat(kpi.target?.toString() || '0');
+  // target จาก field target (number) ของ KPIItem
+  const target =
+    kpi.target !== undefined && kpi.target !== null
+      ? Number(kpi.target)
+      : NaN;
 
-  if (kpi.condition) {
-    // Simple mathematical evaluation
-    switch (kpi.condition.trim()) {
-      case '>':
-        return sumResult > targetResult ? 'pass' : 'fail';
-      case '>=':
-        return sumResult >= targetResult ? 'pass' : 'fail';
-      case '<':
-        return sumResult < targetResult ? 'pass' : 'fail';
-      case '<=':
-        return sumResult <= targetResult ? 'pass' : 'fail';
-      case '=':
-      case '==':
-        return sumResult === targetResult ? 'pass' : 'fail';
-      default:
-        return 'pending';
-    }
+  // actual จาก result (string | null) ของ KPIItem
+  const actual =
+    kpi.result === null || kpi.result === undefined || kpi.result === ''
+      ? null
+      : Number(kpi.result);
+
+  if (Number.isNaN(target)) {
+    return 'pending';
   }
 
-  return 'pending';
+  return getStatusFromCondition(condition, target, actual) as KPIStatus;
 };
 
 export interface KPIItem {
@@ -63,22 +60,15 @@ export interface KPIItem {
   result: string | null;
   status: KPIStatus;
   target?: number;
-  lastUpdated?: string;
   divideNumber?: number;
+  lastUpdated?: string;
   condition?: string;
-  sumResult?: string;
-  ssjPm?: string;
-  mophDepartment?: string;
   kpiType?: string;
+  grade?: string;
+  template_url?: string;
+  ssj_pm?: string;
+  moph_department?: string;
 }
-
-const EXCELLENCE_DESCRIPTION: Record<string, string> = {
-  'PP&P': 'PP&P Excellence',
-  SE: 'Service Excellence',
-  PE: 'People Excellence',
-  GE: 'Governance Excellence',
-  HRE: 'Health-Related Economy Excellence',
-};
 
 interface KPITableProps {
   data?: KPIItem[];
@@ -93,6 +83,7 @@ interface KPITableProps {
   isLoading?: boolean;
   disableDatabaseFetch?: boolean; // New prop to disable Prisma database fetching
   disableDepartmentFiltering?: boolean; // New prop to disable actual department filtering
+  session?: any;
 }
 
 const KPITable: React.FC<KPITableProps> = ({
@@ -108,6 +99,7 @@ const KPITable: React.FC<KPITableProps> = ({
   isLoading,
   disableDatabaseFetch = false, // Default to false for backward compatibility
   disableDepartmentFiltering = false, // Default to false for backward compatibility
+  session,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState(initialDepartment || 'ทั้งหมด');
@@ -147,71 +139,142 @@ const KPITable: React.FC<KPITableProps> = ({
     });
   };
 
+  // Export filtered data to Excel
+  const handleExportExcel = () => {
+    try {
+      // Prepare data for export
+      const exportData = filteredData.map((kpi, index) => {
+        const evaluatedStatus = getEvaluatedStatus(kpi);
+        const statusText = evaluatedStatus === 'pass' ? 'ผ่าน' : 
+                          evaluatedStatus === 'fail' ? 'ไม่ผ่าน' : 'รอประเมิน';
+        
+        return {
+          'ลำดับ': index + 1,
+          'รหัส': kpi.id,
+          'ชื่อตัวชี้วัด': kpi.name,
+          'ระดับ': kpi.level === 'province' ? 'จังหวัด' : 'อำเภอ',
+          'กลุ่มงาน': kpi.department,
+          'เกณฑ์': kpi.criteria,
+          'ประเภทตัวชี้วัด': getKpiTypeLabel(kpi.kpiType || ''),
+          'ผลงาน': kpi.result || '-',
+          'สถานะ': statusText,
+          ' Excellence': EXCELLENCE_MAP[kpi.excellence] || kpi.excellence,
+        };
+      });
+
+      // Create workbook and worksheet
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'รายการตัวชี้วัด');
+
+      // Set column widths
+      const colWidths = [
+        { wch: 8 },   // ลำดับ
+        { wch: 15 },  // รหัส
+        { wch: 40 },  // ชื่อตัวชี้วัด
+        { wch: 12 },  // ระดับ
+        { wch: 20 },  // กลุ่มงาน
+        { wch: 15 },  // เกณฑ์
+        { wch: 20 },  // ประเภทตัวชี้วัด
+        { wch: 12 },  // ผลงาน
+        { wch: 12 },  // สถานะ
+        { wch: 20 },  // Excellence
+      ];
+      ws['!cols'] = colWidths;
+
+      // Generate filename with current date
+      const today = new Date();
+      const dateStr = today.toLocaleDateString('th-TH').replace(/\//g, '-');
+      const filename = `รายการตัวชี้วัด_${dateStr}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, filename);
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      alert('เกิดข้อผิดพลาดในการส่งออกข้อมูล Excel กรุณาลองใหม่');
+    }
+  };
+
+  // Fetch data from database
+  const fetchDataFromDatabase = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('🔄 Fetching data from database...');
+      const response = await fetch('/api/kpi/database');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch data');
+      }
+      
+      const apiData = await response.json();
+      console.log('📊 Raw API response:', apiData);
+      const sourceArray = apiData.data || [];
+      console.log('📋 Source array length:', sourceArray.length);
+
+      const rows: KPIItem[] = sourceArray.map((raw: any, index: number) => {
+        const areaLevel: string = raw.area_level ?? raw.areaLevel ?? '';
+
+        let level: KPIItem['level'] = 'province';
+        if (areaLevel === 'อำเภอ') level = 'district';
+        if (areaLevel === 'จังหวัด') level = 'province';
+
+        const divideNumberRaw = raw.divide_number ?? raw.divideNumber;
+        let divideNumber: number | undefined;
+        if (typeof divideNumberRaw === 'number') {
+          divideNumber = divideNumberRaw;
+        } else if (typeof divideNumberRaw === 'string') {
+          const parsed = parseFloat(divideNumberRaw);
+          divideNumber = isNaN(parsed) ? undefined : parsed;
+        }
+
+        return {
+          id: String(raw.id ?? `KPI-${index + 1}`),
+          name: String(raw.name ?? ''),
+          excellence: String(raw.excellence ?? ''),
+          criteria: String(raw.evaluation_criteria ?? ''),
+          level,
+          department: String(raw.ssj_department ?? ''),
+          result: raw.sum_result && raw.sum_result !== '' ? String(raw.sum_result) : null,
+          status: raw.sum_result && raw.sum_result !== '' ? getEvaluatedStatus({
+            ...raw,
+            result: raw.sum_result,
+            target: raw.target_result,
+            condition: raw.condition
+          }) : 'pending',
+          target: typeof raw.target_result === 'number' ? raw.target_result : undefined,
+          condition: raw.condition,
+          kpiType: raw.kpi_type,
+          divideNumber,
+          grade: raw.grade,
+          template_url: raw.template_url,
+          ssj_pm: raw.ssj_pm,
+          moph_department: raw.moph_department,
+          lastUpdated: raw.last_synced_at ? new Date(raw.last_synced_at).toLocaleDateString('th-TH') : undefined,
+        };
+      });
+
+      console.log('✨ Transformed rows:', rows.length);
+      console.log('📝 Sample row:', rows[0]);
+      setRemoteData(rows);
+      console.log('✅ Data set to remoteData state');
+    } catch (err: any) {
+      console.error('❌ Error in fetchDataFromDatabase:', err);
+      setError(err?.message || 'ไม่สามารถดึงข้อมูลจากฐานข้อมูลได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (data && data.length > 0) return;
 
     let cancelled = false;
     const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Use cache instead of direct API call
-        const cachedData = kpiDataCache.getCachedData();
-        let sourceArray: any[] = [];
-        
-        if (cachedData) {
-          sourceArray = cachedData;
-        } else {
-          // Cache miss, fetch and cache
-          const data = await kpiDataCache.loadData();
-          sourceArray = data;
-        }
-        
-        if (cancelled) return;
-
-        const rows: KPIItem[] = sourceArray.map((raw: any, index: number) => {
-          const areaLevel: string = raw.area_level ?? raw.areaLevel ?? '';
-
-          let level: KPIItem['level'] = 'province';
-          if (areaLevel === 'อำเภอ') level = 'district';
-          if (areaLevel === 'จังหวัด') level = 'province';
-
-          const divideNumberRaw = raw.divide_number ?? raw.divideNumber;
-          let divideNumber: number | undefined;
-          if (typeof divideNumberRaw === 'number') {
-            divideNumber = divideNumberRaw;
-          } else if (typeof divideNumberRaw === 'string') {
-            const parsed = parseFloat(divideNumberRaw);
-            divideNumber = isNaN(parsed) ? undefined : parsed;
-          }
-
-          return {
-            id: String(raw.id ?? `KPI-${index + 1}`),
-            name: String(raw.name ?? ''),
-            excellence: String(raw.excellence ?? ''),
-            criteria: String(raw.evaluation_criteria ?? ''),
-            level,
-            department: String(raw.ssj_department ?? ''),
-            // ตอนนี้ยังไม่มีผลลัพธ์รายงานจริง ใช้ null และ pending เป็นค่าเริ่มต้น
-            result: null,
-            status: 'pending',
-            target: typeof raw.target_result === 'number' ? raw.target_result : undefined,
-            lastUpdated: undefined,
-            kpiType: raw.kpi_type,
-            divideNumber,
-          };
-        });
-
-        setRemoteData(rows);
-      } catch (err: any) {
-        if (!cancelled) {
-          setError(err?.message || 'ไม่สามารถดึงข้อมูลได้');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+      if (!cancelled) {
+        await fetchDataFromDatabase();
       }
     };
 
@@ -221,6 +284,14 @@ const KPITable: React.FC<KPITableProps> = ({
       cancelled = true;
     };
   }, [data]);
+
+  // Refetch data when refreshVersion changes (triggered by navbar sync)
+  useEffect(() => {
+    if (refreshVersion && refreshVersion > 0) {
+      console.log('🔄 Refresh triggered by navbar sync, version:', refreshVersion);
+      fetchDataFromDatabase();
+    }
+  }, [refreshVersion]);
 
   const sourceData: KPIItem[] = data && data.length > 0 ? data : remoteData || [];
 
@@ -279,14 +350,30 @@ const KPITable: React.FC<KPITableProps> = ({
     const matchDepartment =
       selectedDepartment === 'ทั้งหมด' || item.department === selectedDepartment;
     
-    return matchText && matchStatus && matchKpiType && matchDepartment;
+    const matches = matchText && matchStatus && matchKpiType && matchDepartment;
+    
+    // Debug: Log first few items that don't match filters
+    if (sortedData.indexOf(item) < 3 && !matches) {
+      console.log(`❌ Item ${item.id} filtered out:`, {
+        matchText,
+        matchStatus,
+        matchKpiType,
+        matchDepartment,
+        filters: { searchTerm, selectedStatus, selectedKpiType, selectedDepartment },
+        item: { name: item.name, department: item.department, kpiType: item.kpiType, status: getEvaluatedStatus(item) }
+      });
+    }
+    
+    return matches;
   });
+
+  console.log(`📊 Filtered ${sortedData.length} items down to ${filteredData.length}`);
 
   const totalCount = filteredData.length;
   const mophCount = filteredData.filter((item: KPIItem) => item.kpiType === 'KPR').length;
   const provinceCount = totalCount - mophCount;
 
-  const totalColumns = showActionColumn ? 10 : 9;
+  const totalColumns = showActionColumn ? 11 : 10;
 
   const getStatusBadge = (kpi: KPIItem) => {
     const evaluatedStatus = getEvaluatedStatus(kpi);
@@ -390,6 +477,15 @@ const KPITable: React.FC<KPITableProps> = ({
             <RotateCcw size={14} />
             ล้างตัวกรอง
           </button>
+          <button
+            onClick={handleExportExcel}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-green-50 hover:bg-green-100 flex items-center gap-2 text-green-700"
+            title="ส่งออกข้อมูลตามการกรองปัจจุบันเป็นไฟล์ Excel"
+            disabled={filteredData.length === 0}
+          >
+            <Download size={14} />
+            ส่งออก Excel
+          </button>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -463,8 +559,9 @@ const KPITable: React.FC<KPITableProps> = ({
                 </button>
               </th>
               <th className="px-6 py-4 text-center">ผลงาน</th>
+              <th className="px-6 py-4 text-center">เกรด</th>
               <th className="px-6 py-4 text-center">สถานะ</th>
-              <th className="px-6 py-4 text-center">ดูรายละเอียด</th>
+              <th className="px-6 py-4 text-center">รายละเอียด</th>
               <th className="px-6 py-4 text-center">อัพเดทล่าสุด</th>
               {showActionColumn && (
                 <th className="px-6 py-4 text-center">Action</th>
@@ -510,7 +607,7 @@ const KPITable: React.FC<KPITableProps> = ({
                   <td className="px-6 py-4">
                     <div className="font-medium text-gray-800">{kpi.name}</div>
                     <div className="text-xs text-gray-400 mt-0.5">
-                      {EXCELLENCE_DESCRIPTION[kpi.excellence] ?? kpi.excellence}
+                      {EXCELLENCE_MAP[kpi.excellence] ?? kpi.excellence}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">
@@ -535,6 +632,23 @@ const KPITable: React.FC<KPITableProps> = ({
                       </span>
                     ) : (
                       <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {kpi.grade ? (
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          kpi.grade === 'ผ่าน' 
+                            ? 'bg-green-100 text-green-800 border border-green-200'
+                            : kpi.grade === 'ไม่ผ่าน'
+                            ? 'bg-red-100 text-red-800 border border-red-200'
+                            : 'bg-gray-100 text-gray-600 border border-gray-200'
+                        }`}
+                      >
+                        {kpi.grade}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">-</span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-center">
@@ -601,6 +715,7 @@ const KPITable: React.FC<KPITableProps> = ({
           }}
           kpiId={selectedKpiId}
           moneyYear={moneyYear}
+          session={session}
         />
       )}
     </div>

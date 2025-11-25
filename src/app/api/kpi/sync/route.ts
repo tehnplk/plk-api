@@ -1,24 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '../../../../lib/prisma';
 
 const ENDPOINT_URL = process.env.ENDPOINT_URL;
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    console.log('Fetching KPI data from Google Sheets API...');
+    console.log('Starting KPI metadata sync...');
     
-    // Parse query parameters for filtering
-    const { searchParams } = new URL(request.url);
-    const department = searchParams.get('department');
-    const level = searchParams.get('level'); // 'province' or 'district'
-    
-    // Fetch data from Google Sheets API with timeout
+    // Fetch data from Google Sheets API
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       console.log('Request timeout triggered, aborting fetch...');
       controller.abort();
-    }, 25000); // Increased to 25 second timeout
+    }, 25000);
     
-    console.log('Making request to Google Sheets API...');
+    console.log('Fetching KPI data from Google Sheets API...');
     const upstreamUrl = `${ENDPOINT_URL}?sheet=kpi`;
     
     let response;
@@ -58,10 +54,10 @@ export async function GET(request: NextRequest) {
       throw new Error('Invalid API response format');
     }
     
-    console.log(`Processing ${kpiData.length} KPI records...`);
+    console.log(`Processing ${kpiData.length} KPI records for database sync...`);
     
-    // Transform data to match expected format
-    let transformedData = kpiData.map((item: any) => ({
+    // Transform data to match database schema
+    const transformedData = kpiData.map((item: any) => ({
       id: String(item.id ?? ''),
       name: String(item.name ?? ''),
       evaluation_criteria: String(item.evaluation_criteria ?? ''),
@@ -81,42 +77,49 @@ export async function GET(request: NextRequest) {
       template_url: String(item.template_url ?? ''),
     }));
     
-    // Apply filters if provided
-    if (department && department.trim() !== '') {
-      transformedData = transformedData.filter(item => 
-        item.ssj_department === department.trim()
-      );
-    }
+    // Sync data to database using upsert
+    const syncPromises = transformedData.map(async (kpi) => {
+      return prisma.kpis.upsert({
+        where: { id: kpi.id },
+        update: {
+          name: kpi.name,
+          evaluation_criteria: kpi.evaluation_criteria,
+          condition: kpi.condition,
+          target_result: kpi.target_result,
+          divide_number: kpi.divide_number,
+          sum_result: kpi.sum_result,
+          excellence: kpi.excellence,
+          area_level: kpi.area_level,
+          ssj_department: kpi.ssj_department,
+          ssj_pm: kpi.ssj_pm,
+          moph_department: kpi.moph_department,
+          kpi_type: kpi.kpi_type,
+          grade: kpi.grade,
+          template_url: kpi.template_url,
+          last_synced_at: new Date(),
+        },
+        create: {
+          ...kpi,
+          last_synced_at: new Date(),
+        }
+      });
+    });
     
-    if (level && level.trim() !== '') {
-      transformedData = transformedData.filter(item => 
-        item.area_level === (level.trim() === 'province' ? 'จังหวัด' : 'อำเภอ')
-      );
-    }
+    // Execute all sync operations
+    const results = await Promise.all(syncPromises);
     
-    console.log(`Returning ${transformedData.length} filtered KPI records`);
+    console.log(`Successfully synced ${results.length} KPI records to database`);
     
-    // Return in the same format as the original API
-    const response_data = {
+    return NextResponse.json({
       success: true,
-      data: transformedData,
-      count: transformedData.length,
-      source: 'google_sheets',
+      message: 'KPI metadata synced successfully',
+      count: results.length,
       lastSyncedAt: new Date(),
-      timestamp: Date.now(), // Add timestamp to prevent caching
-    };
-    
-    // Remove caching headers to ensure fresh data
-    return NextResponse.json(response_data, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
+      source: 'google_sheets'
     });
     
   } catch (error) {
-    console.error('Failed to fetch KPI data from Google Sheets:', error);
+    console.error('Failed to sync KPI metadata:', error);
     
     let errorMessage = 'Unknown error occurred';
     if (error instanceof Error) {
@@ -132,5 +135,40 @@ export async function GET(request: NextRequest) {
       message: errorMessage,
       error: String(error),
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    // Get sync status
+    const lastSync = await prisma.kpis.findFirst({
+      select: {
+        last_synced_at: true,
+      },
+      orderBy: {
+        last_synced_at: 'desc'
+      }
+    });
+    
+    const totalRecords = await prisma.kpis.count();
+    
+    return NextResponse.json({
+      success: true,
+      lastSyncedAt: lastSync?.last_synced_at,
+      totalRecords,
+      databaseStatus: 'connected'
+    });
+    
+  } catch (error) {
+    console.error('Failed to get sync status:', error);
+    return NextResponse.json({
+      success: false,
+      message: 'Failed to get sync status',
+      error: String(error),
+    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

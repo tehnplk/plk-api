@@ -1,3 +1,4 @@
+// Dashboard ส่วนสรุปผลตามยุทธศาสตร์ 5 Excellence
 "use client";
 
 import React from "react";
@@ -41,7 +42,7 @@ const ExcellenceBox = ({ title, total, pass, fail, pending, percent, theme }: an
         <span className="block text-2xl font-bold" style={{ color: theme.success }}>
           {percent}%
         </span>
-        <span className="text-xs text-gray-400">ประสิทธิผล</span>
+        <span className="text-xs text-gray-400">ร้อยละ</span>
       </div>
     </div>
 
@@ -82,6 +83,17 @@ const ExcellenceBox = ({ title, total, pass, fail, pending, percent, theme }: an
 );
 
 const DashboardExcellenceSection: React.FC<Props> = ({ excellenceStats, theme }) => {
+  const totalAll = excellenceStats.reduce((sum, item) => sum + (item.total || 0), 0);
+  const passAll = excellenceStats.reduce((sum, item) => sum + (item.pass || 0), 0);
+  const failAll = excellenceStats.reduce((sum, item) => sum + (item.fail || 0), 0);
+  const pendingAll = excellenceStats.reduce(
+    (sum, item) => sum + (item.pending || 0),
+    0,
+  );
+  const denomAll = Math.max(totalAll, 1);
+  const percentAll =
+    totalAll === 0 ? "0.0" : ((passAll / denomAll) * 100).toFixed(1);
+
   return (
     <div>
       <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -92,6 +104,17 @@ const DashboardExcellenceSection: React.FC<Props> = ({ excellenceStats, theme })
         {excellenceStats.map((item, idx) => (
           <ExcellenceBox key={idx} {...item} theme={theme} />
         ))}
+        {excellenceStats.length > 0 && (
+          <ExcellenceBox
+            title="รวมทั้งหมด"
+            total={totalAll}
+            pass={passAll}
+            fail={failAll}
+            pending={pendingAll}
+            percent={percentAll}
+            theme={theme}
+          />
+        )}
       </div>
     </div>
   );

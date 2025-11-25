@@ -1,3 +1,4 @@
+// Dashboard ส่วนสรุปตัวชี้วัดภาพรวม (Summary Section)
 "use client";
 
 import React from "react";

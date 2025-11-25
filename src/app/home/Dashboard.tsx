@@ -1,3 +1,4 @@
+// Dashboard หน้าหลักสรุปตัวชี้วัด KPI จังหวัดพิษณุโลก
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -190,11 +191,9 @@ export default function Dashboard({
       else pendingCount += 1;
     });
 
-    const effectiveDenominator = Math.max(total - pendingCount, 1);
+    const denom = Math.max(total, 1);
     const percentPass =
-      total === 0
-        ? "0.0"
-        : ((passCount / effectiveDenominator) * 100).toFixed(1);
+      total === 0 ? "0.0" : ((passCount / denom) * 100).toFixed(1);
 
     // สรุปตาม 5 Excellence จริงจากข้อมูล kpiData
     const excellenceStats = Object.entries(EXCELLENCE_MAP).map(
@@ -234,9 +233,9 @@ export default function Dashboard({
           else pendingEx += 1;
         });
 
-        const denom = Math.max(totalEx - pendingEx, 1);
+        const denom = Math.max(totalEx, 1);
         const percent =
-          totalEx === 0 ? "0" : ((passEx / denom) * 100).toFixed(0);
+          totalEx === 0 ? "0.0" : ((passEx / denom) * 100).toFixed(1);
 
         return {
           title: label,

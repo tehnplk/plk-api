@@ -5,6 +5,7 @@ import { X, FileText, Calendar, TrendingUp, Target, Users, Award, Building, Save
 import { kpiDataCache } from '../../utils/kpiDataCache';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { MONTH_NAMES, MONTH_FIELDS, DISTRICTS } from '@/config/constants';
+import { toast } from 'react-toastify';
 
 interface KPIDetail {
   id: string;
@@ -99,191 +100,6 @@ export default function KPIDetailModal({
           console.warn('Failed to fetch KPI metadata from database:', err);
         }
 
-        // Mockup mode - use sample data instead of database
-        const mockDatabaseResults = kpiMetadata?.area_level === 'อำเภอ' ? [
-          {
-            area_name: 'เมืองพิษณุโลก',
-            kpi_target: 85,
-            result_oct: 82,
-            result_nov: 84,
-            result_dec: 86,
-            result_jan: 83,
-            result_feb: 85,
-            result_mar: 87,
-            result_apr: 84,
-            result_may: 86,
-            result_jun: 85,
-            result_jul: 83,
-            result_aug: 84,
-            result_sep: 85,
-            sum_result: 85,
-            rate: 85.5
-          },
-          {
-            area_name: 'นครไทย',
-            kpi_target: 80,
-            result_oct: 78,
-            result_nov: 79,
-            result_dec: 81,
-            result_jan: 77,
-            result_feb: 80,
-            result_mar: 82,
-            result_apr: 79,
-            result_may: 81,
-            result_jun: 80,
-            result_jul: 78,
-            result_aug: 79,
-            result_sep: 80,
-            sum_result: 80,
-            rate: 82.3
-          },
-          {
-            area_name: 'ชาติตระการ',
-            kpi_target: 75,
-            result_oct: 73,
-            result_nov: 74,
-            result_dec: 76,
-            result_jan: 72,
-            result_feb: 75,
-            result_mar: 77,
-            result_apr: 74,
-            result_may: 76,
-            result_jun: 75,
-            result_jul: 73,
-            result_aug: 74,
-            result_sep: 75,
-            sum_result: 75,
-            rate: 78.9
-          },
-          {
-            area_name: 'บางระกำ',
-            kpi_target: 82,
-            result_oct: 80,
-            result_nov: 81,
-            result_dec: 83,
-            result_jan: 79,
-            result_feb: 82,
-            result_mar: 84,
-            result_apr: 81,
-            result_may: 83,
-            result_jun: 82,
-            result_jul: 80,
-            result_aug: 81,
-            result_sep: 82,
-            sum_result: 82,
-            rate: 84.1
-          },
-          {
-            area_name: 'บางกระทุ่ม',
-            kpi_target: 78,
-            result_oct: 76,
-            result_nov: 77,
-            result_dec: 79,
-            result_jan: 75,
-            result_feb: 78,
-            result_mar: 80,
-            result_apr: 77,
-            result_may: 79,
-            result_jun: 78,
-            result_jul: 76,
-            result_aug: 77,
-            result_sep: 78,
-            sum_result: 78,
-            rate: 80.5
-          },
-          {
-            area_name: 'พรหมพิราม',
-            kpi_target: 88,
-            result_oct: 85,
-            result_nov: 86,
-            result_dec: 89,
-            result_jan: 84,
-            result_feb: 87,
-            result_mar: 90,
-            result_apr: 86,
-            result_may: 88,
-            result_jun: 87,
-            result_jul: 85,
-            result_aug: 86,
-            result_sep: 87,
-            sum_result: 87,
-            rate: 89.2
-          },
-          {
-            area_name: 'วัดโบสถ์',
-            kpi_target: 76,
-            result_oct: 74,
-            result_nov: 75,
-            result_dec: 77,
-            result_jan: 73,
-            result_feb: 76,
-            result_mar: 78,
-            result_apr: 75,
-            result_may: 77,
-            result_jun: 76,
-            result_jul: 74,
-            result_aug: 75,
-            result_sep: 76,
-            sum_result: 76,
-            rate: 78.7
-          },
-          {
-            area_name: 'วังทอง',
-            kpi_target: 83,
-            result_oct: 81,
-            result_nov: 82,
-            result_dec: 84,
-            result_jan: 80,
-            result_feb: 83,
-            result_mar: 85,
-            result_apr: 82,
-            result_may: 84,
-            result_jun: 83,
-            result_jul: 81,
-            result_aug: 82,
-            result_sep: 83,
-            sum_result: 83,
-            rate: 85.3
-          },
-          {
-            area_name: 'เนินมะปราง',
-            kpi_target: 79,
-            result_oct: 77,
-            result_nov: 78,
-            result_dec: 80,
-            result_jan: 76,
-            result_feb: 79,
-            result_mar: 81,
-            result_apr: 78,
-            result_may: 80,
-            result_jun: 79,
-            result_jul: 77,
-            result_aug: 78,
-            result_sep: 79,
-            sum_result: 79,
-            rate: 81.6
-          }
-        ] : [
-          {
-            area_name: 'จังหวัด',
-            kpi_target: 85,
-            result_oct: 82,
-            result_nov: 84,
-            result_dec: 86,
-            result_jan: 83,
-            result_feb: 85,
-            result_mar: 87,
-            result_apr: 84,
-            result_may: 86,
-            result_jun: 85,
-            result_jul: 83,
-            result_aug: 84,
-            result_sep: 85,
-            sum_result: 85,
-            rate: 85.5
-          }
-        ];
-
         // If we have no metadata, show error
         if (!kpiMetadata) {
           throw new Error('ไม่พบข้อมูล KPI นี้ในระบบ (Mockup)');
@@ -370,233 +186,26 @@ export default function KPIDetailModal({
             throw new Error('Failed to fetch real data');
           }
         } catch (fetchError) {
-          console.warn('Using mockup data due to fetch error:', fetchError);
-          
-          // Use mockup data as fallback
-          const mockDatabaseResults = kpiMetadata?.area_level === 'อำเภอ' ? [
-            {
-              area_name: 'เมืองพิษณุโลก',
-              kpi_target: 85,
-              result_oct: 82,
-              result_nov: 84,
-              result_dec: 86,
-              result_jan: 83,
-              result_feb: 85,
-              result_mar: 87,
-              result_apr: 84,
-              result_may: 86,
-              result_jun: 85,
-              result_jul: 83,
-              result_aug: 84,
-              result_sep: 85,
-              sum_result: 85,
-              rate: 85.5
-            },
-            {
-              area_name: 'นครไทย',
-              kpi_target: 80,
-              result_oct: 78,
-              result_nov: 79,
-              result_dec: 81,
-              result_jan: 77,
-              result_feb: 80,
-              result_mar: 82,
-              result_apr: 79,
-              result_may: 81,
-              result_jun: 80,
-              result_jul: 78,
-              result_aug: 79,
-              result_sep: 80,
-              sum_result: 80,
-              rate: 82.3
-            },
-            {
-              area_name: 'ชาติตระการ',
-              kpi_target: 75,
-              result_oct: 73,
-              result_nov: 74,
-              result_dec: 76,
-              result_jan: 72,
-              result_feb: 75,
-              result_mar: 77,
-              result_apr: 74,
-              result_may: 76,
-              result_jun: 75,
-              result_jul: 73,
-              result_aug: 74,
-              result_sep: 75,
-              sum_result: 75,
-              rate: 78.9
-            },
-            {
-              area_name: 'บางระกำ',
-              kpi_target: 82,
-              result_oct: 80,
-              result_nov: 81,
-              result_dec: 83,
-              result_jan: 79,
-              result_feb: 82,
-              result_mar: 84,
-              result_apr: 81,
-              result_may: 83,
-              result_jun: 82,
-              result_jul: 80,
-              result_aug: 81,
-              result_sep: 82,
-              sum_result: 82,
-              rate: 84.1
-            },
-            {
-              area_name: 'บางกระทุ่ม',
-              kpi_target: 78,
-              result_oct: 76,
-              result_nov: 77,
-              result_dec: 79,
-              result_jan: 75,
-              result_feb: 78,
-              result_mar: 80,
-              result_apr: 77,
-              result_may: 79,
-              result_jun: 78,
-              result_jul: 76,
-              result_aug: 77,
-              result_sep: 78,
-              sum_result: 78,
-              rate: 80.5
-            },
-            {
-              area_name: 'พรหมพิราม',
-              kpi_target: 88,
-              result_oct: 85,
-              result_nov: 86,
-              result_dec: 89,
-              result_jan: 84,
-              result_feb: 87,
-              result_mar: 90,
-              result_apr: 86,
-              result_may: 88,
-              result_jun: 87,
-              result_jul: 85,
-              result_aug: 86,
-              result_sep: 87,
-              sum_result: 87,
-              rate: 89.2
-            },
-            {
-              area_name: 'วัดโบสถ์',
-              kpi_target: 76,
-              result_oct: 74,
-              result_nov: 75,
-              result_dec: 77,
-              result_jan: 73,
-              result_feb: 76,
-              result_mar: 78,
-              result_apr: 75,
-              result_may: 77,
-              result_jun: 76,
-              result_jul: 74,
-              result_aug: 75,
-              result_sep: 76,
-              sum_result: 76,
-              rate: 78.7
-            },
-            {
-              area_name: 'วังทอง',
-              kpi_target: 83,
-              result_oct: 81,
-              result_nov: 82,
-              result_dec: 84,
-              result_jan: 80,
-              result_feb: 83,
-              result_mar: 85,
-              result_apr: 82,
-              result_may: 84,
-              result_jun: 83,
-              result_jul: 81,
-              result_aug: 82,
-              result_sep: 83,
-              sum_result: 83,
-              rate: 85.3
-            },
-            {
-              area_name: 'เนินมะปราง',
-              kpi_target: 79,
-              result_oct: 77,
-              result_nov: 78,
-              result_dec: 80,
-              result_jan: 76,
-              result_feb: 79,
-              result_mar: 81,
-              result_apr: 78,
-              result_may: 80,
-              result_jun: 79,
-              result_jul: 77,
-              result_aug: 78,
-              result_sep: 79,
-              sum_result: 79,
-              rate: 81.6
-            }
-          ] : [
-            {
-              area_name: 'จังหวัด',
-              kpi_target: 85,
-              result_oct: 82,
-              result_nov: 84,
-              result_dec: 86,
-              result_jan: 83,
-              result_feb: 85,
-              result_mar: 87,
-              result_apr: 84,
-              result_may: 86,
-              result_jun: 85,
-              result_jul: 83,
-              result_aug: 84,
-              result_sep: 85,
-              sum_result: 85,
-              rate: 85.5
-            }
-          ];
+          console.warn('Using empty template data due to fetch error or missing report:', fetchError);
 
-          // Process district data for table
-          districtTableData = mockDatabaseResults.map((record: any) => {
-            const monthlyValues = MONTH_FIELDS.map(field => 
-              record[field] !== null && record[field] !== undefined 
-                ? Number(record[field]) 
-                : null
-            );
+          // สร้างแถวว่างสำหรับให้ user กรอกเอง ตามระดับตัวชี้วัด
+          const isDistrictLevel = kpiMetadata?.area_level === 'อำเภอ';
+          const areaNames = isDistrictLevel ? DISTRICTS : ['จังหวัด'];
 
-            const total = monthlyValues.reduce((sum: number, val) => sum + (val || 0), 0);
-            const target = record.kpi_target !== null && record.kpi_target !== undefined 
-              ? Number(record.kpi_target) 
-              : null;
-            const divideNumber = kpiMetadata?.divide_number !== null && kpiMetadata?.divide_number !== undefined 
-              ? Number(kpiMetadata.divide_number) 
-              : 1;
-            const rate = target && target > 0 
-              ? Math.round((total / target) * divideNumber * 100) / 100
-              : 0;
-            
-            return {
-              area_name: record.area_name,
-              target,
-              monthlyValues,
-              total,
-              rate
-            };
-          });
+          districtTableData = areaNames.map((areaName: string) => ({
+            area_name: areaName,
+            // ยังไม่มี KpiReport => ยังไม่มี kpi_target ให้แสดง ให้เริ่มจาก null เพื่อให้ user กรอกเอง
+            target: null,
+            monthlyValues: MONTH_FIELDS.map(() => null),
+            total: 0,
+            rate: 0,
+          }));
 
-          // Create aggregated chart data (sum of all districts)
-          chartData = MONTH_NAMES.map((month, index) => {
-            const monthlySum = mockDatabaseResults.reduce((sum: number, record: any) => {
-              const value = record[MONTH_FIELDS[index]];
-              return sum + (value !== null && value !== undefined ? Number(value) : 0);
-            }, 0);
-            
-            return {
-              month,
-              value: monthlySum > 0 ? monthlySum : null,
-            };
-          });
+          // กราฟว่าง (ไม่มีค่าจริง) แต่โครงสร้างเดือนครบ
+          chartData = MONTH_NAMES.map((month) => ({
+            month,
+            value: null,
+          }));
         }
 
         setMonthlyData(chartData);
@@ -691,16 +300,30 @@ export default function KPIDetailModal({
         }
         return district;
       });
-      
+
+      // Recompute aggregated monthlyData for the line chart ("ทั้งหมด")
+      const aggregatedMonthlyData: MonthlyData[] = MONTH_NAMES.map((month, index) => {
+        const monthlySum = updatedDistrictData.reduce((sum: number, dist) => {
+          const val = dist.monthlyValues[index];
+          return sum + (val ?? 0);
+        }, 0);
+
+        return {
+          month,
+          value: monthlySum > 0 ? monthlySum : null,
+        };
+      });
+
       setDistrictData(updatedDistrictData);
+      setMonthlyData(aggregatedMonthlyData);
       setIsEditing(false);
       
-      // Show success message
-      alert(`บันทึกข้อมูลสำเร็จ! (${result.count} รายการ)`);
+      // Show success message via toast (no item count)
+      toast.success('บันทึกข้อมูลสำเร็จ!');
       
     } catch (error) {
       console.error('Error saving data:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่');
+      toast.error('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่');
     } finally {
       setLoading(false);
     }
@@ -959,7 +582,7 @@ export default function KPIDetailModal({
                                       ? 'bg-yellow-100 text-yellow-800'
                                       : 'bg-red-100 text-red-800'
                                 }`}>
-                                  {district.rate > 0 ? district.rate : '-'}
+                                  {district.rate > 0 ? district.rate.toFixed(2) : '-'}
                                 </span>
                               </td>
                             </tr>
@@ -1006,7 +629,7 @@ export default function KPIDetailModal({
                                         ? 'bg-yellow-100 text-yellow-800'
                                         : 'bg-red-100 text-red-800'
                                   }`}>
-                                    {summaryRate > 0 ? summaryRate : '-'}
+                                    {summaryRate > 0 ? summaryRate.toFixed(2) : '-'}
                                   </span>
                                 </td>
                               </tr>

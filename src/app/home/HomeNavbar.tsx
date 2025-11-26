@@ -6,6 +6,7 @@ import type { Session } from 'next-auth';
 import { signOut } from 'next-auth/react';
 import { Activity, LayoutDashboard, LogIn, User, FileText, RefreshCw, ChevronDown, Users, Menu, X, MapPin } from 'lucide-react';
 import { signInWithHealthId } from '../actions/sign-in';
+import { VERSION } from '../../config/version';
 
 interface HomeNavbarProps {
   moneyYear: number;
@@ -97,6 +98,7 @@ export default function HomeNavbar({
           <div>
             <h1 className="text-lg md:text-xl font-bold text-green-800 leading-tight">
               PHITSANULOK KPI
+              <span className="text-xs text-gray-500 ml-2 font-normal">{VERSION}</span>
             </h1>
             <p className="text-xs text-green-600 hidden md:block">
               ระบบรายงานตัวชี้วัด สสจ.พิษณุโลก ปีงบประมาณ {moneyYear}

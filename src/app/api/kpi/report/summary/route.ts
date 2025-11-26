@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/prisma';
 import { getStatusFromCondition } from '@/utils/conditionEvaluator';
 import { DISTRICTS } from '@/config/constants';
+import { EXCELLENCE_MAP } from '@/constants/excellence';
 
 // GET /api/kpi/report/summary?moneyYear=2569
 // สรุปข้อมูลรายอำเภอจากตาราง kpi_report โดย join กับ kpis เพื่อประเมินสถานะตาม condition/target
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
         id: true,
         condition: true,
         target_result: true,
+        excellence: true,
       },
     });
 
@@ -44,12 +46,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const kpiMetaMap = new Map<string, { condition: string; target_result: number }>();
+    const kpiMetaMap = new Map<string, { condition: string; target_result: number; excellence: string | null }>();
     const kpiIds = allDistrictKpis.map((k) => k.id);
     allDistrictKpis.forEach((kpi) => {
       kpiMetaMap.set(kpi.id, {
         condition: kpi.condition,
         target_result: kpi.target_result,
+        excellence: (kpi as any).excellence ?? null,
       });
     });
 
@@ -78,7 +81,16 @@ export async function GET(request: NextRequest) {
       total: number;
     };
 
+    type ExcellenceAgg = {
+      title: string;
+      total: number;
+      pass: number;
+      fail: number;
+      pending: number;
+    };
+
     const districtAgg = new Map<string, DistrictAgg>();
+    const districtExcellenceAgg = new Map<string, Map<string, ExcellenceAgg>>();
 
     // เตรียมโครงอำเภอให้ครบทุก DISTRICTS
     for (const name of DISTRICTS) {
@@ -89,17 +101,44 @@ export async function GET(request: NextRequest) {
         pending: 0,
         total: 0,
       });
+      districtExcellenceAgg.set(name, new Map<string, ExcellenceAgg>());
     }
 
     // วนทุกอำเภอ × ทุก KPI ระดับอำเภอ
     for (const areaName of DISTRICTS) {
       const agg = districtAgg.get(areaName)!;
+      const exMap = districtExcellenceAgg.get(areaName)!;
 
       for (const kpi of allDistrictKpis) {
         const meta = kpiMetaMap.get(kpi.id);
+
+        // เตรียมตัวสะสมตาม Excellence (ถ้าระบุไว้และอยู่ใน 5 Excellence)
+        let exAgg: ExcellenceAgg | null = null;
+        if (meta && meta.excellence && EXCELLENCE_MAP[meta.excellence]) {
+          const key = meta.excellence;
+          const existing = exMap.get(key);
+          if (existing) {
+            exAgg = existing;
+          } else {
+            const created: ExcellenceAgg = {
+              title: EXCELLENCE_MAP[key],
+              total: 0,
+              pass: 0,
+              fail: 0,
+              pending: 0,
+            };
+            exMap.set(key, created);
+            exAgg = created;
+          }
+        }
+
         if (!meta) {
           agg.total += 1;
           agg.pending += 1;
+          if (exAgg) {
+            exAgg.total += 1;
+            exAgg.pending += 1;
+          }
           continue;
         }
 
@@ -145,10 +184,17 @@ export async function GET(request: NextRequest) {
         if (status === 'pass') agg.pass += 1;
         else if (status === 'fail') agg.fail += 1;
         else agg.pending += 1;
+
+        if (exAgg) {
+          exAgg.total += 1;
+          if (status === 'pass') exAgg.pass += 1;
+          else if (status === 'fail') exAgg.fail += 1;
+          else exAgg.pending += 1;
+        }
       }
     }
 
-    // แปลงเป็นรูปสำหรับกราฟ
+    // แปลงเป็นรูปสำหรับกราฟและข้อมูล 5 Excellence รายอำเภอ
     const districtComparisonData = Array.from(districtAgg.values()).map((d) => ({
       name: d.name,
       pass: d.pass,
@@ -166,7 +212,29 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({ districtData, districtComparisonData });
+    const districtExcellenceData = Array.from(districtAgg.values()).map((d) => {
+      const exMap = districtExcellenceAgg.get(d.name) || new Map<string, ExcellenceAgg>();
+      const excellenceStats = Array.from(exMap.values()).map((ex) => {
+        const denom = Math.max(ex.total, 1);
+        const percent =
+          ex.total === 0 ? '0.0' : ((ex.pass / denom) * 100).toFixed(1);
+        return {
+          title: ex.title,
+          total: ex.total,
+          pass: ex.pass,
+          fail: ex.fail,
+          pending: ex.pending,
+          percent,
+        };
+      });
+
+      return {
+        name: d.name,
+        excellenceStats,
+      };
+    });
+
+    return NextResponse.json({ districtData, districtComparisonData, districtExcellenceData });
   } catch (error) {
     console.error('Error summarizing KPI report by district:', error);
     return NextResponse.json(

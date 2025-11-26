@@ -70,7 +70,7 @@ const DashboardSummarySection: React.FC<Props> = ({
         <div className="flex items-center gap-4">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Database size={24} className="text-green-600" />
-            ตัวชี้วัดปีงบประมาณ {moneyYear}
+            ตัวชี้วัดปีงบประมาณ {moneyYear}{selectedDistrictScope !== "ALL" && ` (${selectedDistrictScope})`}
           </h2>
 
           {isKpiLoading && (

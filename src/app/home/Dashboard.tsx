@@ -64,6 +64,17 @@ export default function Dashboard({
     pending: number;
     total: number;
   }[]>([]);
+  const [districtExcellenceData, setDistrictExcellenceData] = useState<{
+    name: string;
+    excellenceStats: {
+      title: string;
+      total: number;
+      pass: number;
+      fail: number;
+      pending: number;
+      percent: string | number;
+    }[];
+  }[]>([]);
 
   const handleRefreshKpis = async () => {
     await loadKpiData(true); // Force refresh
@@ -145,6 +156,7 @@ export default function Dashboard({
       const json = await response.json();
       setDistrictData(json.districtData || []);
       setDistrictComparisonData(json.districtComparisonData || []);
+      setDistrictExcellenceData(json.districtExcellenceData || []);
     } catch (error) {
       // Retry on network errors
       if (retryCount < 2) {
@@ -223,58 +235,80 @@ export default function Dashboard({
     const percentPass =
       total === 0 ? "0.0" : ((passCount / denom) * 100).toFixed(1);
 
-    // สรุปตาม 5 Excellence จริงจากข้อมูล kpiData (ยังเป็นภาพรวมจังหวัด)
-    const excellenceStats = Object.entries(EXCELLENCE_MAP).map(
-      ([code, label]) => {
-        const items = kpiData.filter(
-          (item: any) => String(item.excellence ?? "") === code
-        );
+    // สรุปตาม 5 Excellence
+    let excellenceStats: {
+      title: string;
+      total: number;
+      pass: number;
+      fail: number;
+      pending: number;
+      percent: string | number;
+    }[];
 
-        const totalEx = items.length;
-        let passEx = 0;
-        let failEx = 0;
-        let pendingEx = 0;
-
-        items.forEach((item: any) => {
-          const condition = (item.condition ?? "").toString().trim();
-          const targetRaw = item.target_result;
-          const target =
-            typeof targetRaw === "number"
-              ? targetRaw
-              : targetRaw
-              ? Number(targetRaw)
-              : NaN;
-          const actualRaw = item.sum_result;
-          const actual =
-            actualRaw === null || actualRaw === undefined || actualRaw === ""
-              ? null
-              : Number(actualRaw);
-
-          if (!condition || Number.isNaN(target)) {
-            pendingEx += 1;
-            return;
-          }
-
-          const status = getStatusFromCondition(condition, target, actual);
-          if (status === "pass") passEx += 1;
-          else if (status === "fail") failEx += 1;
-          else pendingEx += 1;
-        });
-
-        const denom = Math.max(totalEx, 1);
-        const percent =
-          totalEx === 0 ? "0.0" : ((passEx / denom) * 100).toFixed(1);
-
-        return {
-          title: label,
-          total: totalEx,
-          pass: passEx,
-          fail: failEx,
-          pending: pendingEx,
-          percent,
-        };
+    if (!isAllDistricts && districtExcellenceData && districtExcellenceData.length > 0) {
+      // กรณีเลือกอำเภอเฉพาะ ใช้ข้อมูลจาก districtExcellenceData ของอำเภอนั้น
+      const districtEx = districtExcellenceData.find(
+        (d) => d.name === selectedDistrictScope
+      );
+      if (districtEx && districtEx.excellenceStats.length > 0) {
+        excellenceStats = districtEx.excellenceStats;
+      } else {
+        excellenceStats = [];
       }
-    );
+    } else {
+      // ภาพรวมจังหวัด: สรุปจาก kpiData เดิม
+      excellenceStats = Object.entries(EXCELLENCE_MAP).map(
+        ([code, label]) => {
+          const items = kpiData.filter(
+            (item: any) => String(item.excellence ?? "") === code
+          );
+
+          const totalEx = items.length;
+          let passEx = 0;
+          let failEx = 0;
+          let pendingEx = 0;
+
+          items.forEach((item: any) => {
+            const condition = (item.condition ?? "").toString().trim();
+            const targetRaw = item.target_result;
+            const target =
+              typeof targetRaw === "number"
+                ? targetRaw
+                : targetRaw
+                ? Number(targetRaw)
+                : NaN;
+            const actualRaw = item.sum_result;
+            const actual =
+              actualRaw === null || actualRaw === undefined || actualRaw === ""
+                ? null
+                : Number(actualRaw);
+
+            if (!condition || Number.isNaN(target)) {
+              pendingEx += 1;
+              return;
+            }
+
+            const status = getStatusFromCondition(condition, target, actual);
+            if (status === "pass") passEx += 1;
+            else if (status === "fail") failEx += 1;
+            else pendingEx += 1;
+          });
+
+          const denom = Math.max(totalEx, 1);
+          const percent =
+            totalEx === 0 ? "0.0" : ((passEx / denom) * 100).toFixed(1);
+
+          return {
+            title: label,
+            total: totalEx,
+            pass: passEx,
+            fail: failEx,
+            pending: pendingEx,
+            percent,
+          };
+        }
+      );
+    }
 
     return {
       total,

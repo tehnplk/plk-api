@@ -663,16 +663,17 @@ const KPITable: React.FC<KPITableProps> = ({
                     <div className="font-medium text-gray-800">{kpi.name}</div>
                     <div className="text-[11px] text-gray-400 mt-0.5">
                       {EXCELLENCE_MAP[kpi.excellence] ?? kpi.excellence}
-                    </div>
-                    <div className="text-[11px] text-gray-400">
-                      {kpi.kpiType
-                        ? kpi.kpiType
+                      {kpi.kpiType && (
+                        <>
+                          {' · '}
+                          {kpi.kpiType
                             .split(',')
                             .map((t) => t.trim())
                             .filter(Boolean)
                             .map((t) => getKpiTypeLabel(t))
-                            .join(', ')
-                        : ''}
+                            .join(', ')}
+                        </>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">

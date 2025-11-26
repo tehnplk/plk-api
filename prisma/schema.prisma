@@ -77,6 +77,7 @@ model AccountUser {
 
   @@index([account_id])
   @@index([email])
+  @@index([provider_id, active])
   @@map("account_user")
 }
 

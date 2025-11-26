@@ -5,6 +5,7 @@ import GitHubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
 import LineProvider from "next-auth/providers/line";
 import { cookies } from "next/headers";
+import { prisma } from '@/lib/prisma';
 
 
 const authOptions: NextAuthConfig = {
@@ -86,6 +87,69 @@ const authOptions: NextAuthConfig = {
         console.log('🟢 LOGIN SUCCESSFUL - User authenticated:', user.name);
         
         token.profile = (user as any).profile;
+        
+        // Update login tracking for activated users only (only on initial login)
+        // The 'user' object only exists on initial sign-in, not on token refresh
+        try {
+          const profile = (user as any).profile;
+          let providerId = user.name;
+          
+          // Extract provider_id from profile if available
+          if (profile) {
+            try {
+              const parsedProfile = typeof profile === 'string' ? JSON.parse(profile) : profile;
+              providerId = parsedProfile.provider_id || parsedProfile.sub || parsedProfile.id || user.name;
+              console.log('🔍 Debug - providerId extracted:', providerId);
+              console.log('🔍 Debug - parsedProfile keys:', Object.keys(parsedProfile));
+            } catch (e) {
+              console.log('Profile parse error, using username as providerId');
+            }
+          }
+          
+          // Update login_count and last_login for activated users
+          console.log('🔍 Debug - Attempting to update user with provider_id:', providerId);
+          
+          const updateResult = await prisma.accountUser.updateMany({
+            where: {
+              provider_id: providerId,
+              active: true
+            },
+            data: {
+              last_login: new Date(),
+              login_count: {
+                increment: 1
+              }
+            }
+          });
+          
+          console.log('🔍 Debug - Update result count:', updateResult.count);
+          
+          if (updateResult.count > 0) {
+            console.log('✅ Login tracking updated for user:', providerId);
+          } else {
+            console.log('⚠️ User not found or not activated:', providerId);
+            // Check if user exists but is not active
+            const existingUser = await prisma.accountUser.findFirst({
+              where: {
+                provider_id: providerId
+              },
+              select: {
+                id: true,
+                provider_id: true,
+                active: true,
+                login_count: true,
+                last_login: true
+              }
+            });
+            if (existingUser) {
+              console.log('🔍 Debug - User exists but active status:', existingUser.active);
+            } else {
+              console.log('🔍 Debug - No user found with provider_id:', providerId);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error updating login tracking:', error);
+        }
         
         // Read department from cookie and store in token
         const cookieStore = await cookies();

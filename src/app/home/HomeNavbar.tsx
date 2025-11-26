@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import type { Session } from 'next-auth';
 import { signOut } from 'next-auth/react';
-import { Activity, LayoutDashboard, LogIn, User, FileText, RefreshCw, ChevronDown, Users } from 'lucide-react';
+import { Activity, LayoutDashboard, LogIn, User, FileText, RefreshCw, ChevronDown, Users, Menu, X, MapPin } from 'lucide-react';
 import { signInWithHealthId } from '../actions/sign-in';
 
 interface HomeNavbarProps {
@@ -38,6 +38,7 @@ export default function HomeNavbar({
 }: HomeNavbarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Parse user profile from session
@@ -104,110 +105,236 @@ export default function HomeNavbar({
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Sync Button */}
-          {onSync && (
-            <button 
-              onClick={onSync}
-              disabled={isSyncing}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="ซิงค์ข้อมูลจาก Google Sheets"
-            >
-              <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-              {isSyncing ? 'กำลังซิงค์...' : 'ซิงค์ข้อมูล'}
-            </button>
-          )}
-
-          {/* District Selector */}
-          {districtOptions.length > 0 && onDistrictChange && (
-            <select
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              value={selectedDistrict || 'ALL'}
-              onChange={(e) => onDistrictChange(e.target.value)}
-            >
-              <option value="ALL">ภาพรวมจังหวัด (ทุกอำเภอ)</option>
-              {districtOptions.map((district) => (
-                <option key={district} value={district}>
-                  อำเภอ{district}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {session ? (
-            <>
-              <button
-                onClick={scrollToKpiTable}
-                className="hidden md:flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 transition-all shadow-sm text-sm font-medium"
-              >
-                <FileText size={16} /> รายการตัวชี้วัด
-              </button>
-              
-              {/* User Dropdown */}
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 transition-colors cursor-pointer"
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-4">
+            {/* District Selector */}
+            {districtOptions.length > 0 && onDistrictChange && (
+              <div className="flex items-center gap-2">
+                <MapPin size={20} className="text-red-500" />
+                <select
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={selectedDistrict || 'ALL'}
+                  onChange={(e) => onDistrictChange(e.target.value)}
                 >
-                  <User size={16} />
-                  <span className="hidden md:block truncate max-w-[200px]">
-                    {displayName}
-                  </span>
-                  <ChevronDown 
-                    size={14} 
-                    className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
-                  />
+                  <option value="ALL">ภาพรวมจังหวัด (ทุกอำเภอ)</option>
+                  {districtOptions.map((district) => (
+                    <option key={district} value={district}>
+                      อำเภอ{district}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {session ? (
+              <>
+                <button
+                  onClick={scrollToKpiTable}
+                  className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-all shadow-sm text-sm font-medium"
+                >
+                  <FileText size={16} /> รายการตัวชี้วัด
                 </button>
 
-                {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                {/* Sync Button */}
+                {onSync && (
+                  <button 
+                    onClick={onSync}
+                    disabled={isSyncing}
+                    className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="ซิงค์ข้อมูลจาก Google Sheets"
+                  >
+                    <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                    {isSyncing ? 'กำลังซิงค์...' : 'ซิงค์ข้อมูล'}
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={scrollToKpiTable}
+                  className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-all shadow-sm text-sm font-medium"
+                >
+                  <FileText size={16} /> รายการตัวชี้วัด
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden flex items-center gap-2 bg-sky-100 hover:bg-sky-200 px-3 py-2 rounded-lg text-sm font-medium text-sky-700 transition-colors"
+          >
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+
+          {/* User Dropdown - Desktop */}
+          {session ? (
+            <div className="hidden md:block relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-2 bg-sky-100 hover:bg-sky-200 px-3 py-2 rounded-lg text-sm font-medium text-sky-700 transition-colors cursor-pointer"
+              >
+                <User size={16} />
+                <span className="truncate max-w-[200px]">
+                  {displayName}
+                </span>
+                <ChevronDown 
+                  size={14} 
+                  className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <Link
+                    href="/profile"
+                    onClick={() => setIsDropdownOpen(false)}
+                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
+                  >
+                    <User size={16} />
+                    Profile
+                  </Link>
+                  {userRole === 'admin' && (
                     <Link
-                      href="/profile"
+                      href="/account"
                       onClick={() => setIsDropdownOpen(false)}
                       className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
                     >
-                      <User size={16} />
-                      Profile
+                      <Users size={16} />
+                      จัดการผู้ใช้
                     </Link>
-                    {userRole === 'admin' && (
-                      <Link
-                        href="/account"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
-                      >
-                        <Users size={16} />
-                        จัดการผู้ใช้
-                      </Link>
-                    )}
-                    <button
-                      onClick={handleLogout}
-                      className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
-                    >
-                      <LogIn size={16} />
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+                  >
+                    <LogIn size={16} />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
-            <>
-              <button
-                onClick={scrollToKpiTable}
-                className="hidden md:flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 transition-all shadow-sm text-sm font-medium"
-              >
-                <FileText size={16} /> รายการตัวชี้วัด
-              </button>
-              <Link
-                href="/login"
-                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-medium cursor-pointer"
-              >
-                <LogIn size={16} /> เข้าสู่ระบบ
-              </Link>
-            </>
+            <Link
+              href="/login"
+              className="hidden md:flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-medium cursor-pointer"
+            >
+              <LogIn size={16} /> เข้าสู่ระบบ
+            </Link>
           )}
         </div>
       </div>
     </header>
+
+    {/* Mobile Menu */}
+    {isMobileMenuOpen && (
+      <div className="md:hidden bg-white border-b border-gray-200 shadow-lg">
+        <div className="container mx-auto px-4 py-4 space-y-4">
+          {/* District Selector - Mobile */}
+          {districtOptions.length > 0 && onDistrictChange && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <MapPin size={20} className="text-red-500" />
+                เลือกอำเภอ
+              </label>
+              <select
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                value={selectedDistrict || 'ALL'}
+                onChange={(e) => {
+                  onDistrictChange(e.target.value);
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                <option value="ALL">ภาพรวมจังหวัด (ทุกอำเภอ)</option>
+                {districtOptions.map((district) => (
+                  <option key={district} value={district}>
+                    อำเภอ{district}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Navigation Buttons - Mobile */}
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                scrollToKpiTable();
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-2 bg-green-500 text-white px-4 py-3 rounded-lg hover:bg-green-600 transition-all shadow-sm text-sm font-medium justify-center"
+            >
+              <FileText size={16} /> รายการตัวชี้วัด
+            </button>
+
+            {/* Sync Button - Mobile */}
+            {onSync && session && (
+              <button 
+                onClick={() => {
+                  onSync();
+                  setIsMobileMenuOpen(false);
+                }}
+                disabled={isSyncing}
+                className="w-full bg-orange-500 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-orange-600 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed justify-center"
+                title="ซิงค์ข้อมูลจาก Google Sheets"
+              >
+                <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                {isSyncing ? 'กำลังซิงค์...' : 'ซิงค์ข้อมูล'}
+              </button>
+            )}
+          </div>
+
+          {/* User Actions - Mobile */}
+          {session ? (
+            <div className="space-y-2 pt-4 border-t border-gray-200">
+              <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                <User size={16} />
+                <span className="font-medium">{displayName}</span>
+              </div>
+              <Link
+                href="/profile"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+              >
+                <User size={16} />
+                Profile
+              </Link>
+              {userRole === 'admin' && (
+                <Link
+                  href="/account"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+                >
+                  <Users size={16} />
+                  จัดการผู้ใช้
+                </Link>
+              )}
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+              >
+                <LogIn size={16} />
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div className="pt-4 border-t border-gray-200">
+              <Link
+                href="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full flex items-center gap-2 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-medium justify-center"
+              >
+                <LogIn size={16} /> เข้าสู่ระบบ
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
 
     {/* Profile Modal */}
     {isProfileModalOpen && userProfile && (

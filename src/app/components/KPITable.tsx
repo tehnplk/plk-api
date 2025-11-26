@@ -22,6 +22,19 @@ const getKpiTypeLabel = (type: string) => {
   }
 };
 
+const getKpiTypeBadgeClasses = (type: string) => {
+  switch (type) {
+    case 'KPI':
+      return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'KPR':
+      return 'bg-purple-50 text-purple-700 border-purple-200';
+    case 'PA':
+      return 'bg-pink-50 text-pink-700 border-pink-200';
+    default:
+      return 'bg-gray-50 text-gray-600 border-gray-200';
+  }
+};
+
 const getEvaluatedStatus = (kpi: KPIItem): KPIStatus => {
   // ใช้ util กลางในการประเมิน ผ่าน / ไม่ผ่าน / รอประเมิน
   const condition = (kpi.condition ?? '').toString().trim();
@@ -327,7 +340,14 @@ const KPITable: React.FC<KPITableProps> = ({
   const kpiTypeOptions = useMemo(() => {
     const set = new Set<string>();
     sourceData.forEach((item) => {
-      if (item.kpiType) set.add(item.kpiType);
+      if (item.kpiType) {
+        item.kpiType.split(',').forEach((rawToken) => {
+          const token = rawToken.trim();
+          if (token) {
+            set.add(token);
+          }
+        });
+      }
     });
     return Array.from(set).sort();
   }, [sourceData]);
@@ -367,7 +387,13 @@ const KPITable: React.FC<KPITableProps> = ({
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = selectedStatus === 'ทั้งหมด' || getEvaluatedStatus(item) === selectedStatus;
-    const matchKpiType = selectedKpiType === 'ทั้งหมด' || item.kpiType === selectedKpiType;
+    const matchKpiType =
+      selectedKpiType === 'ทั้งหมด' ||
+      (item.kpiType &&
+        item.kpiType
+          .split(',')
+          .map((t) => t.trim())
+          .includes(selectedKpiType));
     const matchDepartment =
       selectedDepartment === 'ทั้งหมด' || item.department === selectedDepartment;
     
@@ -635,8 +661,18 @@ const KPITable: React.FC<KPITableProps> = ({
                   <td className="px-6 py-4 font-medium text-green-700">{kpi.id}</td>
                   <td className="px-6 py-4">
                     <div className="font-medium text-gray-800">{kpi.name}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">
+                    <div className="text-[11px] text-gray-400 mt-0.5">
                       {EXCELLENCE_MAP[kpi.excellence] ?? kpi.excellence}
+                    </div>
+                    <div className="text-[11px] text-gray-400">
+                      {kpi.kpiType
+                        ? kpi.kpiType
+                            .split(',')
+                            .map((t) => t.trim())
+                            .filter(Boolean)
+                            .map((t) => getKpiTypeLabel(t))
+                            .join(', ')
+                        : ''}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">

@@ -89,10 +89,6 @@ const DashboardDistrictPercentChart: React.FC<DistrictPercentChartProps> = ({
                   fill={
                     entry.name === selectedDistrictScope
                       ? theme.accent
-                      : entry.percent < 50
-                      ? theme.danger
-                      : entry.percent < 80
-                      ? theme.warning
                       : theme.primary
                   }
                   stroke={

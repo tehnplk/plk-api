@@ -12,9 +12,9 @@ import DashboardExcellenceSection from "./DashboardExcellenceSection";
 import DashboardDistrictChartsSection from "./DashboardDistrictChartsSection";
 
 const THEME = {
-  primary: "#00A651",
-  secondary: "#A3D9A5",
-  accent: "#F59E0B",
+  primary: "#10B981",
+  secondary: "#34D399",
+  accent: "#059669",
   bg: "#F3F4F6",
   white: "#FFFFFF",
   textMain: "#1F2937",
@@ -22,7 +22,7 @@ const THEME = {
   success: "#10B981",
   danger: "#EF4444",
   warning: "#F59E0B",
-  info: "#3B82F6",
+  info: "#A7F3D0",
 };
 
 const DISTRICTS = [

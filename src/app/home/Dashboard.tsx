@@ -164,8 +164,10 @@ export default function Dashboard({
   }, [moneyYear]);
 
   const stats = useMemo(() => {
-    // สรุปตัวเลขตามข้อมูลจริงจากฐานข้อมูล kpis
-    const total = kpiData.length;
+    const isAllDistricts = selectedDistrictScope === "ALL";
+
+    // สรุปตัวเลขตามข้อมูลจริงจากฐานข้อมูล kpis (ภาพรวมจังหวัด)
+    let total = kpiData.length;
 
     let passCount = 0;
     let failCount = 0;
@@ -203,11 +205,25 @@ export default function Dashboard({
       else pendingCount += 1;
     });
 
+    // ถ้ามีการเลือกอำเภอเฉพาะ ให้ใช้สรุปจาก districtComparisonData ของอำเภอนั้น
+    if (!isAllDistricts && districtComparisonData && districtComparisonData.length > 0) {
+      const selectedDistrictStats = districtComparisonData.find(
+        (d) => d.name === selectedDistrictScope
+      );
+
+      if (selectedDistrictStats) {
+        total = selectedDistrictStats.total;
+        passCount = selectedDistrictStats.pass;
+        failCount = selectedDistrictStats.fail;
+        pendingCount = selectedDistrictStats.pending;
+      }
+    }
+
     const denom = Math.max(total, 1);
     const percentPass =
       total === 0 ? "0.0" : ((passCount / denom) * 100).toFixed(1);
 
-    // สรุปตาม 5 Excellence จริงจากข้อมูล kpiData
+    // สรุปตาม 5 Excellence จริงจากข้อมูล kpiData (ยังเป็นภาพรวมจังหวัด)
     const excellenceStats = Object.entries(EXCELLENCE_MAP).map(
       ([code, label]) => {
         const items = kpiData.filter(

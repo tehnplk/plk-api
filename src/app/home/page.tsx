@@ -48,6 +48,7 @@ export default function HomePage() {
   const [isKpiLoading, setIsKpiLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
+  const [userDepartment, setUserDepartment] = useState<string>('ทั้งหมด');
 
 
 
@@ -151,8 +152,13 @@ export default function HomePage() {
             fetch(`/api/account/role?provider_id=${providerId}`)
               .then((res) => res.json())
               .then((data) => {
-                if (data.success && data.role) {
-                  setUserRole(data.role);
+                if (data.success) {
+                  if (data.role) {
+                    setUserRole(data.role);
+                  }
+                  if (data.department) {
+                    setUserDepartment(data.department);
+                  }
                 }
               })
               .catch(() => {});
@@ -255,7 +261,7 @@ export default function HomePage() {
         />
         
         <KPIList
-          selectedDepartment={(session?.user as any)?.ssj_department || "ทั้งหมด"}
+          selectedDepartment={userDepartment || "ทั้งหมด"}
           moneyYear={moneyYear}
           refreshVersion={refreshVersion}
           session={session}

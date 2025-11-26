@@ -65,6 +65,42 @@ export default function KPIDetailModal({
   const [editableData, setEditableData] = useState<Record<string, Record<string, string>>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [userRole, setUserRole] = useState<string>('');
+  const [userDepartment, setUserDepartment] = useState<string>('');
+
+  // Fetch user role and department from account_user
+  useEffect(() => {
+    if (session?.user) {
+      const rawProfile = (session.user as any)?.profile;
+      if (rawProfile) {
+        try {
+          const profile = JSON.parse(rawProfile);
+          const providerId = profile.provider_id;
+          if (providerId) {
+            fetch(`/api/account/role?provider_id=${providerId}`)
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.success) {
+                  if (data.role) {
+                    setUserRole(data.role);
+                  }
+                  if (data.department) {
+                    setUserDepartment(data.department);
+                  }
+                }
+              })
+              .catch(() => {});
+          }
+        } catch {}
+      }
+    }
+  }, [session]);
+
+  // Check permissions based on role
+  // admin: can edit all KPIs
+  // editor: can edit only KPIs in their department
+  const canEdit = userRole === 'admin' || (userRole === 'editor' && kpiDetail?.department === userDepartment);
+  const canSync = userRole === 'admin' || userRole === 'editor' || userRole === 'viewer';
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -628,23 +664,27 @@ export default function KPIDetailModal({
               <>
                 {!isEditing ? (
                   <>
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-1"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      <FileText size={14} />
-                      แก้ไขข้อมูล
-                    </button>
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 flex items-center gap-1"
-                      onClick={handleSyncToSheet}
-                      disabled={syncing}
-                    >
-                      <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-                      {syncing ? 'Syncing...' : 'Sync Sheet'}
-                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                        onClick={() => setIsEditing(true)}
+                      >
+                        <FileText size={14} />
+                        แก้ไขข้อมูล
+                      </button>
+                    )}
+                    {canSync && (
+                      <button
+                        type="button"
+                        className="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 flex items-center gap-1"
+                        onClick={handleSyncToSheet}
+                        disabled={syncing}
+                      >
+                        <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+                        {syncing ? 'Syncing...' : 'Sync Sheet'}
+                      </button>
+                    )}
                   </>
                 ) : (
                   <>

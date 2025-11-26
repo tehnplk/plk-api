@@ -33,6 +33,7 @@ export default function LoginPage() {
           {/* Button 1: เข้าสู่ระบบ */}
           <form action={signInWithHealthId}>
             <input type="hidden" name="department" value="" />
+            <input type="hidden" name="redirectTo" value="/profile" />
             <button
               type="submit"
               className="w-full px-6 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all flex items-center justify-center gap-3 font-semibold text-lg shadow-md hover:shadow-lg"

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
 import Link from "next/link";
 import { ArrowLeft, Users } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface AccountUser {
   id: number;
@@ -44,6 +46,8 @@ const THEME = {
 };
 
 export default function AccountPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [users, setUsers] = useState<AccountUser[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +55,55 @@ export default function AccountPage() {
   const [editingUser, setEditingUser] = useState<AccountUser | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<AccountUser | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userRole, setUserRole] = useState<string>('');
+  const [isCheckingRole, setIsCheckingRole] = useState(true);
+
+  // Redirect to login if unauthenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/login');
+    }
+  }, [status, router]);
+
+  // Fetch user role from account_user
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const rawProfile = (session.user as any)?.profile;
+      if (rawProfile) {
+        try {
+          const profile = JSON.parse(rawProfile);
+          const providerId = profile.provider_id;
+          if (providerId) {
+            fetch(`/api/account/role?provider_id=${providerId}`)
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.success && data.role) {
+                  setUserRole(data.role);
+                }
+                setIsCheckingRole(false);
+              })
+              .catch(() => {
+                setIsCheckingRole(false);
+              });
+          } else {
+            setIsCheckingRole(false);
+          }
+        } catch {
+          setIsCheckingRole(false);
+        }
+      } else {
+        setIsCheckingRole(false);
+      }
+    }
+  }, [status, session]);
+
+  // Redirect to home if not admin
+  useEffect(() => {
+    if (!isCheckingRole && userRole !== 'admin') {
+      toast.error('คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+      router.replace('/home');
+    }
+  }, [isCheckingRole, userRole, router]);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -165,6 +218,18 @@ export default function AccountPage() {
       minute: "2-digit",
     });
   };
+
+  // Show loading while checking auth/role
+  if (status === 'loading' || status === 'unauthenticated' || isCheckingRole || userRole !== 'admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">กำลังตรวจสอบสิทธิ์...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: THEME.bg }}>

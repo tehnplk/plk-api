@@ -98,7 +98,8 @@ const KPITable: React.FC<KPITableProps> = ({
   session,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState(initialDepartment || 'ทั้งหมด');
+  const [selectedDepartment, setSelectedDepartment] = useState('ทั้งหมด');
+  const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<KPIStatus | 'ทั้งหมด'>('ทั้งหมด');
   const [selectedKpiType, setSelectedKpiType] = useState<string>('ทั้งหมด');
   const [showMophOnly, setShowMophOnly] = useState(false);
@@ -288,6 +289,30 @@ const KPITable: React.FC<KPITableProps> = ({
       fetchDataFromDatabase();
     }
   }, [refreshVersion]);
+
+  // Fetch user department from account_user
+  useEffect(() => {
+    if (session?.user) {
+      const rawProfile = (session.user as any)?.profile;
+      if (rawProfile) {
+        try {
+          const profile = JSON.parse(rawProfile);
+          const providerId = profile.provider_id;
+          if (providerId) {
+            fetch(`/api/account/role?provider_id=${providerId}`)
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.success && data.department) {
+                  setUserDepartment(data.department);
+                  setSelectedDepartment(data.department);
+                }
+              })
+              .catch(() => {});
+          }
+        } catch {}
+      }
+    }
+  }, [session]);
 
   const sourceData: KPIItem[] = data && data.length > 0 ? data : remoteData || [];
 

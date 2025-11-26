@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { User, Mail, Building2, IdCard, Phone, MapPin, ArrowLeft, Shield, Calendar, Cookie } from 'lucide-react';
+import { User, Mail, Building2, IdCard, Phone, MapPin, ArrowLeft, Shield, Calendar, Cookie, LayoutDashboard, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ProfilePage() {
@@ -76,6 +76,13 @@ export default function ProfilePage() {
     }
   }, [status, session]);
 
+  // Redirect to login if unauthenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/login');
+    }
+  }, [status, router]);
+
   // Handle register button click - upsert account_user
   const handleRegister = async () => {
     setIsSubmitting(true);
@@ -98,8 +105,8 @@ export default function ProfilePage() {
     }
   };
 
-  // Redirect to login if not authenticated
-  if (status === 'loading') {
+  // Show loading while checking auth
+  if (status === 'loading' || status === 'unauthenticated') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
@@ -108,11 +115,6 @@ export default function ProfilePage() {
         </div>
       </div>
     );
-  }
-
-  if (status === 'unauthenticated') {
-    router.replace('/login');
-    return null;
   }
 
   // Parse profile data from session
@@ -172,6 +174,14 @@ export default function ProfilePage() {
               <p className="text-xs text-gray-500">ระบบรายงาน KPI สสจ.พิษณุโลก</p>
             </div>
           </div>
+          {/* Dashboard Button */}
+          <Link
+            href="/home"
+            className="ml-auto px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+          >
+            <LayoutDashboard size={18} />
+            Dashboard
+          </Link>
         </div>
       </header>
 
@@ -302,9 +312,21 @@ export default function ProfilePage() {
               <button
                 onClick={handleRegister}
                 disabled={isSubmitting}
-                className="block w-full py-3 px-6 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group relative block w-full py-4 px-6 bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 text-white rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 text-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'กำลังลงทะเบียน...' : 'ยืนยันการลงทะเบียน'}
+                <div className="flex items-center justify-center gap-3">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/20 border border-white/40 shadow-inner">
+                    <CheckCircle2 size={28} className="text-white drop-shadow-sm transition-transform group-hover:scale-110" />
+                  </span>
+                  <div className="flex flex-col items-start">
+                    <span className="text-base">
+                      {isSubmitting ? 'กำลังลงทะเบียน...' : 'ยืนยันการลงทะเบียน'}
+                    </span>
+                    <span className="text-xs text-green-100">
+                      กดเพื่อบันทึกข้อมูลของคุณเข้าสู่ระบบ
+                    </span>
+                  </div>
+                </div>
               </button>
             </div>
           )}

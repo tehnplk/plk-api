@@ -54,15 +54,6 @@ export class KpiDataCache {
     }
   }
 
-  // Clear cache method (no-op since we don't use localStorage)
-  clearCache(): void {
-    console.log('Cache cleared - now using database directly');
-  }
-
-  // Check if cache exists (always true since we use database)
-  hasValidCache(): boolean {
-    return true;
-  }
 }
 
 // Export singleton instance

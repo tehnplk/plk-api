@@ -2,9 +2,10 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Session } from 'next-auth';
 import { signOut } from 'next-auth/react';
-import { Activity, LayoutDashboard, LogIn, User, FileText, RefreshCw, ChevronDown, Users, Menu, X, MapPin } from 'lucide-react';
+import { LayoutDashboard, LogIn, User, FileText, RefreshCw, ChevronDown, Users, Menu, X, MapPin } from 'lucide-react';
 import { signInWithHealthId } from '../actions/sign-in';
 import { VERSION } from '../../config/version';
 
@@ -92,8 +93,14 @@ export default function HomeNavbar({
       <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-green-100">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold shadow">
-            <Activity size={24} />
+          <div className="w-10 h-10 flex items-center justify-center">
+            <Image
+              src="/logo.png"
+              alt="PHITSANULOK KPI Logo"
+              width={40}
+              height={40}
+              className="rounded-full shadow"
+            />
           </div>
           <div>
             <h1 className="text-lg md:text-xl font-bold text-green-800 leading-tight">

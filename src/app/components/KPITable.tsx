@@ -303,6 +303,12 @@ const KPITable: React.FC<KPITableProps> = ({
     }
   }, [refreshVersion]);
 
+  useEffect(() => {
+    if (initialDepartment && initialDepartment !== 'ทั้งหมด') {
+      setSelectedDepartment(initialDepartment);
+    }
+  }, [initialDepartment]);
+
   // Fetch user department from account_user
   useEffect(() => {
     if (session?.user) {

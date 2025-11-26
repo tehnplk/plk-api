@@ -2,22 +2,19 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
+import Link from "next/link";
+import { ArrowLeft, Users } from "lucide-react";
 
 interface AccountUser {
-  id: string;
+  id: number;
   account_id: string;
   provider_id: string;
   full_name_th: string;
   full_name_en: string | null;
   email: string | null;
-  birth_date: string | null;
-  position: string | null;
-  role: string | null;
-  department: string | null;
-  level: string | null;
   organization: string | null;
-  hospital_code: string | null;
-  address: string | null;
+  department: string | null;
+  role: string | null;
   active: boolean;
   last_login: string | null;
   login_count: number;
@@ -172,22 +169,25 @@ export default function AccountPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: THEME.bg }}>
       {/* Header */}
-      <div
-        className="shadow-sm"
-        style={{ backgroundColor: THEME.white }}
-      >
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: THEME.primary }}
+      <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-green-100">
+        <div className="container mx-auto px-4 h-16 flex items-center gap-4">
+          <Link
+            href="/home"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            จัดการบัญชีผู้ใช้
-          </h1>
-          <p style={{ color: THEME.textLight }}>
-            รายการผู้ใช้งานทั้งหมด {users.length} คน
-          </p>
+            <ArrowLeft size={24} className="text-green-600" />
+          </Link>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold shadow">
+              <Users size={20} />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">จัดการบัญชีผู้ใช้</h1>
+              <p className="text-xs text-gray-500">รายการผู้ใช้งานทั้งหมด {users.length} คน</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </header>
 
       {/* Search */}
       <div className="max-w-7xl mx-auto px-4 py-4">
@@ -226,28 +226,34 @@ export default function AccountPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-xs">
                 <thead>
                   <tr style={{ backgroundColor: THEME.bg }}>
-                    <th className="px-4 py-3 text-left text-sm font-semibold" style={{ color: THEME.textMain }}>
+                    <th className="px-3 py-2 text-center font-semibold w-12" style={{ color: THEME.textMain }}>
+                      ลำดับ
+                    </th>
+                    <th className="px-3 py-2 text-left font-semibold" style={{ color: THEME.textMain }}>
                       ชื่อ-นามสกุล
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold" style={{ color: THEME.textMain }}>
+                    <th className="px-3 py-2 text-left font-semibold" style={{ color: THEME.textMain }}>
                       อีเมล
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold" style={{ color: THEME.textMain }}>
-                      หน่วยงาน
+                    <th className="px-3 py-2 text-left font-semibold" style={{ color: THEME.textMain }}>
+                      สังกัด
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold" style={{ color: THEME.textMain }}>
-                      ตำแหน่ง
+                    <th className="px-3 py-2 text-left font-semibold" style={{ color: THEME.textMain }}>
+                      กลุ่มงาน
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold" style={{ color: THEME.textMain }}>
-                      สถานะ
+                    <th className="px-3 py-2 text-left font-semibold" style={{ color: THEME.textMain }}>
+                      Role
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold" style={{ color: THEME.textMain }}>
-                      เข้าสู่ระบบ
+                    <th className="px-3 py-2 text-center font-semibold" style={{ color: THEME.textMain }}>
+                      Activate
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold" style={{ color: THEME.textMain }}>
+                    <th className="px-3 py-2 text-center font-semibold" style={{ color: THEME.textMain }}>
+                      เข้าใช้ล่าสุด
+                    </th>
+                    <th className="px-3 py-2 text-center font-semibold" style={{ color: THEME.textMain }}>
                       จัดการ
                     </th>
                   </tr>
@@ -259,57 +265,75 @@ export default function AccountPage() {
                       className="border-t hover:bg-gray-50"
                       style={{ borderColor: THEME.bg }}
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2 text-center font-medium" style={{ color: THEME.textLight }}>
+                        {idx + 1}
+                      </td>
+                      <td className="px-3 py-2">
                         <div className="font-medium" style={{ color: THEME.textMain }}>
                           {user.full_name_th}
                         </div>
                         {user.full_name_en && (
-                          <div className="text-sm" style={{ color: THEME.textLight }}>
+                          <div style={{ color: THEME.textLight }}>
                             {user.full_name_en}
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: THEME.textMain }}>
+                      <td className="px-3 py-2" style={{ color: THEME.textMain }}>
                         {user.email || "-"}
                       </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: THEME.textMain }}>
-                        <div>{user.organization || "-"}</div>
-                        {user.hospital_code && (
-                          <div style={{ color: THEME.textLight }}>
-                            รหัส: {user.hospital_code}
-                          </div>
-                        )}
+                      <td className="px-3 py-2" style={{ color: THEME.textMain }}>
+                        {(() => {
+                          try {
+                            const orgs = JSON.parse(user.organization || "[]");
+                            if (Array.isArray(orgs) && orgs.length > 0) {
+                              return (
+                                <div className="space-y-1">
+                                  {orgs.map((org: any, i: number) => (
+                                    <div key={i}>
+                                      {i + 1}. {org.position || "-"} {org.hname_th || "-"}({org.hcode || "-"})
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return "-";
+                          } catch {
+                            return user.organization || "-";
+                          }
+                        })()}
                       </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: THEME.textMain }}>
-                        {user.position || "-"}
+                      <td className="px-3 py-2" style={{ color: THEME.textMain }}>
+                        {user.department || "-"}
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-3 py-2" style={{ color: THEME.textMain }}>
+                        {user.role || "-"}
+                      </td>
+                      <td className="px-3 py-2 text-center">
                         <span
-                          className="px-2 py-1 rounded-full text-xs font-medium"
+                          className="px-2 py-0.5 rounded-full font-medium"
                           style={{
                             backgroundColor: user.active ? "#D1FAE5" : "#FEE2E2",
                             color: user.active ? THEME.success : THEME.danger,
                           }}
                         >
-                          {user.active ? "ใช้งาน" : "ปิดใช้งาน"}
+                          {user.active ? "YES" : "NO"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center text-sm" style={{ color: THEME.textLight }}>
-                        <div>{user.login_count} ครั้ง</div>
-                        <div className="text-xs">{formatDateTime(user.last_login)}</div>
+                      <td className="px-3 py-2 text-center" style={{ color: THEME.textLight }}>
+                        {user.last_login ? formatDateTime(user.last_login) : "-"}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center gap-2">
+                      <td className="px-3 py-2 text-center">
+                        <div className="flex justify-center gap-1">
                           <button
                             onClick={() => setEditingUser(user)}
-                            className="px-3 py-1 rounded text-sm font-medium text-white"
+                            className="px-2 py-1 rounded font-medium text-white"
                             style={{ backgroundColor: THEME.info }}
                           >
                             แก้ไข
                           </button>
                           <button
                             onClick={() => setDeleteConfirm(user)}
-                            className="px-3 py-1 rounded text-sm font-medium text-white"
+                            className="px-2 py-1 rounded font-medium text-white"
                             style={{ backgroundColor: THEME.danger }}
                           >
                             ลบ
@@ -329,198 +353,131 @@ export default function AccountPage() {
       {editingUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div
-            className="rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            className="rounded-lg shadow-xl w-full max-w-md"
             style={{ backgroundColor: THEME.white }}
           >
-            <div className="p-6">
-              <h2
-                className="text-xl font-bold mb-4"
-                style={{ color: THEME.primary }}
-              >
-                แก้ไขข้อมูลผู้ใช้
+            {/* Header */}
+            <div className="px-6 py-4 border-b" style={{ borderColor: THEME.bg }}>
+              <h2 className="text-lg font-bold" style={{ color: THEME.primary }}>
+                แก้ไขสิทธิ์ผู้ใช้
               </h2>
-
-              <form onSubmit={handleUpdate}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: THEME.textMain }}>
-                      ชื่อ-นามสกุล (ไทย) *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editingUser.full_name_th}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, full_name_th: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ borderColor: THEME.secondary }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: THEME.textMain }}>
-                      ชื่อ-นามสกุล (อังกฤษ)
-                    </label>
-                    <input
-                      type="text"
-                      value={editingUser.full_name_en || ""}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, full_name_en: e.target.value || null })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ borderColor: THEME.secondary }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: THEME.textMain }}>
-                      อีเมล
-                    </label>
-                    <input
-                      type="email"
-                      value={editingUser.email || ""}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, email: e.target.value || null })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ borderColor: THEME.secondary }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: THEME.textMain }}>
-                      ตำแหน่ง
-                    </label>
-                    <input
-                      type="text"
-                      value={editingUser.position || ""}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, position: e.target.value || null })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ borderColor: THEME.secondary }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: THEME.textMain }}>
-                      Role
-                    </label>
-                    <input
-                      type="text"
-                      value={editingUser.role || ""}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, role: e.target.value || null })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ borderColor: THEME.secondary }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: THEME.textMain }}>
-                      กลุ่มงาน
-                    </label>
-                    <select
-                      value={editingUser.department || ""}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, department: e.target.value || null })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ borderColor: THEME.secondary }}
-                    >
-                      <option value="">-- เลือกกลุ่มงาน --</option>
-                      {departments.map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: THEME.textMain }}>
-                      หน่วยงาน
-                    </label>
-                    <input
-                      type="text"
-                      value={editingUser.organization || ""}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, organization: e.target.value || null })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ borderColor: THEME.secondary }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: THEME.textMain }}>
-                      รหัสหน่วยบริการ
-                    </label>
-                    <input
-                      type="text"
-                      value={editingUser.hospital_code || ""}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, hospital_code: e.target.value || null })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ borderColor: THEME.secondary }}
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium mb-1" style={{ color: THEME.textMain }}>
-                      ที่อยู่
-                    </label>
-                    <input
-                      type="text"
-                      value={editingUser.address || ""}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, address: e.target.value || null })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ borderColor: THEME.secondary }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={editingUser.active}
-                        onChange={(e) =>
-                          setEditingUser({ ...editingUser, active: e.target.checked })
-                        }
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm font-medium" style={{ color: THEME.textMain }}>
-                        เปิดใช้งาน
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-                  <button
-                    type="button"
-                    onClick={() => setEditingUser(null)}
-                    className="px-4 py-2 rounded-lg font-medium"
-                    style={{ backgroundColor: THEME.bg, color: THEME.textMain }}
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 rounded-lg font-medium text-white disabled:opacity-50"
-                    style={{ backgroundColor: THEME.primary }}
-                  >
-                    {isSubmitting ? "กำลังบันทึก..." : "บันทึก"}
-                  </button>
-                </div>
-              </form>
+              <p className="text-sm mt-1" style={{ color: THEME.textLight }}>
+                {editingUser.full_name_th}
+              </p>
             </div>
+
+            {/* User Info (Read-only) */}
+            <div className="px-6 py-4 space-y-2" style={{ backgroundColor: THEME.bg }}>
+              <div className="flex justify-between text-sm">
+                <span style={{ color: THEME.textLight }}>Provider ID:</span>
+                <span className="font-mono" style={{ color: THEME.textMain }}>{editingUser.provider_id}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span style={{ color: THEME.textLight }}>Email:</span>
+                <span style={{ color: THEME.textMain }}>{editingUser.email || "-"}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span style={{ color: THEME.textLight }}>หน่วยงาน:</span>
+                <span style={{ color: THEME.textMain }}>
+                  {(() => {
+                    try {
+                      const org = JSON.parse(editingUser.organization || "[]");
+                      return org[0]?.hname_th || "-";
+                    } catch {
+                      return "-";
+                    }
+                  })()}
+                </span>
+              </div>
+            </div>
+
+            {/* Editable Fields */}
+            <form onSubmit={handleUpdate}>
+              <div className="px-6 py-5 space-y-5">
+                {/* Department */}
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: THEME.textMain }}>
+                    กลุ่มงาน
+                  </label>
+                  <select
+                    value={editingUser.department || ""}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, department: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    style={{ borderColor: THEME.secondary }}
+                  >
+                    <option value="">-- เลือกกลุ่มงาน --</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Role */}
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: THEME.textMain }}>
+                    Role
+                  </label>
+                  <select
+                    value={editingUser.role || ""}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, role: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    style={{ borderColor: THEME.secondary }}
+                  >
+                    <option value="">-- ไม่ระบุ --</option>
+                    <option value="admin">Admin</option>
+                    <option value="editor">Editor</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                </div>
+
+                {/* Active Toggle */}
+                <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: THEME.bg }}>
+                  <div>
+                    <p className="font-medium" style={{ color: THEME.textMain }}>สถานะการใช้งาน</p>
+                    <p className="text-sm" style={{ color: THEME.textLight }}>
+                      {editingUser.active ? "บัญชีนี้เปิดใช้งานอยู่" : "บัญชีนี้ถูกปิดใช้งาน"}
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingUser.active}
+                      onChange={(e) =>
+                        setEditingUser({ ...editingUser, active: e.target.checked })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex gap-3 px-6 py-4 border-t" style={{ borderColor: THEME.bg }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="flex-1 px-4 py-2.5 rounded-lg font-medium"
+                  style={{ backgroundColor: THEME.bg, color: THEME.textMain }}
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2.5 rounded-lg font-medium text-white disabled:opacity-50"
+                  style={{ backgroundColor: THEME.primary }}
+                >
+                  {isSubmitting ? "กำลังบันทึก..." : "บันทึก"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

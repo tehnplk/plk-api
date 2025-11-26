@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import type { Session } from 'next-auth';
 import { signOut } from 'next-auth/react';
-import { Activity, LayoutDashboard, LogIn, User, FileText, RefreshCw, ChevronDown } from 'lucide-react';
+import { Activity, LayoutDashboard, LogIn, User, FileText, RefreshCw, ChevronDown, Users } from 'lucide-react';
 import { signInWithHealthId } from '../actions/sign-in';
 
 interface HomeNavbarProps {
@@ -19,6 +19,7 @@ interface HomeNavbarProps {
   selectedDistrict?: string;
   onDistrictChange?: (district: string) => void;
   districtOptions?: string[];
+  userRole?: string;
 }
 
 export default function HomeNavbar({ 
@@ -32,7 +33,8 @@ export default function HomeNavbar({
   isSyncing = false,
   selectedDistrict,
   onDistrictChange,
-  districtOptions = []
+  districtOptions = [],
+  userRole = ''
 }: HomeNavbarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -158,16 +160,24 @@ export default function HomeNavbar({
 
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                    <button
-                      onClick={() => {
-                        setIsDropdownOpen(false);
-                        setIsProfileModalOpen(true);
-                      }}
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsDropdownOpen(false)}
                       className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
                     >
                       <User size={16} />
                       Profile
-                    </button>
+                    </Link>
+                    {userRole === 'admin' && (
+                      <Link
+                        href="/account"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
+                      >
+                        <Users size={16} />
+                        จัดการผู้ใช้
+                      </Link>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"

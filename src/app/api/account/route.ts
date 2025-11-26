@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
         { full_name_en: { contains: search } },
         { email: { contains: search } },
         { provider_id: { contains: search } },
-        { hospital_code: { contains: search } },
+        { organization: { contains: search } },
       ];
     }
 
@@ -88,7 +88,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     await prisma.accountUser.delete({
-      where: { id },
+      where: { id: parseInt(id) },
     });
 
     return NextResponse.json({

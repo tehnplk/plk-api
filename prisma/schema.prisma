@@ -59,21 +59,16 @@ model KpiReport {
 }
 
 model AccountUser {
-  id                 String   @id @default(cuid())
+  id                 Int      @id @default(autoincrement())
   account_id         String
   provider_id        String   @unique
   full_name_th       String
   full_name_en       String?
   email              String?
-  birth_date         DateTime?
-  position           String?
-  role               String?
-  department         String?
-  level              String?
   organization       String?
-  hospital_code      String?
-  address            String?
-  active             Boolean  @default(true)
+  department         String?  @default("")
+  role               String?  @default("")
+  active             Boolean  @default(false)
   last_login         DateTime?
   login_count        Int      @default(0)
   created_account_at DateTime?
@@ -82,7 +77,6 @@ model AccountUser {
 
   @@index([account_id])
   @@index([email])
-  @@index([hospital_code])
   @@map("account_user")
 }
 

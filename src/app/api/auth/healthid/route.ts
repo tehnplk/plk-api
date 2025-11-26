@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { signIn } from '@/authConfig'
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+
 export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const code = searchParams.get('code');
+    
+    // Get redirectTo from cookie
+    const cookieStore = await cookies();
+    const redirectTo = cookieStore.get('redirectTo')?.value || '/home';
 
     if (!code) {
         return NextResponse.json({ error: 'Authorization code is missing' }, { status: 400 });
@@ -67,7 +73,7 @@ export async function GET(request: NextRequest) {
     const res = await signIn('credentials', {
         'cred-way': 'health-id',
         'profile': JSON.stringify(profileData.data),
-        redirectTo: "/home"
+        redirectTo: redirectTo
     });
     console.log("res sign in = ", res);
     

@@ -47,6 +47,7 @@ export default function HomePage() {
   const { data: session, status } = useSession();
   const [isKpiLoading, setIsKpiLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [userRole, setUserRole] = useState<string>('');
 
 
 
@@ -138,6 +139,29 @@ export default function HomePage() {
       });
   }, []);
 
+  // Fetch user role from account_user
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const rawProfile = (session.user as any)?.profile;
+      if (rawProfile) {
+        try {
+          const profile = JSON.parse(rawProfile);
+          const providerId = profile.provider_id;
+          if (providerId) {
+            fetch(`/api/account/role?provider_id=${providerId}`)
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.success && data.role) {
+                  setUserRole(data.role);
+                }
+              })
+              .catch(() => {});
+          }
+        } catch {}
+      }
+    }
+  }, [status, session]);
+
 
 
   let displayName = "";
@@ -219,6 +243,7 @@ export default function HomePage() {
         selectedDistrict={selectedDistrictScope}
         onDistrictChange={handleDistrictChange}
         districtOptions={DISTRICTS}
+        userRole={userRole}
       />
 
       <main className="container mx-auto px-4 py-6">

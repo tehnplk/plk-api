@@ -23,6 +23,7 @@ export default function DbManagePage() {
   const [viewColumns, setViewColumns] = useState<string[]>([]);
   const [viewLoading, setViewLoading] = useState(false);
   const [viewError, setViewError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const loadTables = async () => {
     try {
@@ -96,7 +97,7 @@ export default function DbManagePage() {
 
   const handleSync = async (table: DbTable) => {
     // TODO: เชื่อมต่อ API sync ข้อมูลตาราง
-    if (!table.canSync) return;
+    if (!table.canSync || isSyncing) return;
 
     // ตอนนี้รองรับ Sync เฉพาะตาราง kpis โดยเรียก /api/kpi/sync แบบเดียวกับปุ่มที่หน้า /home
     if (table.name !== 'kpis') {
@@ -106,6 +107,7 @@ export default function DbManagePage() {
 
     const doSync = async () => {
       try {
+        setIsSyncing(true);
         setLoading(true);
         const response = await fetch('/api/kpi/sync', {
           method: 'POST',
@@ -127,6 +129,7 @@ export default function DbManagePage() {
         toast.error('Sync ล้มเหลว กรุณาลองใหม่');
       } finally {
         setLoading(false);
+        setIsSyncing(false);
       }
     };
 
@@ -272,10 +275,10 @@ export default function DbManagePage() {
                         </button>
                         <button
                           type="button"
-                          disabled={!table.canSync}
+                          disabled={!table.canSync || isSyncing}
                           onClick={() => handleSync(table)}
                           className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                            table.canSync
+                            table.canSync && !isSyncing
                               ? 'border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100'
                               : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
                           }`}

@@ -78,6 +78,8 @@ export async function POST(request: NextRequest) {
     }));
     
     // Sync data to database using upsert
+    await prisma.kpis.deleteMany({});
+    console.log('Truncated kpis table before syncing new data');
     const syncPromises = transformedData.map(async (kpi) => {
       return prisma.kpis.upsert({
         where: { id: kpi.id },

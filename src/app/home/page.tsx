@@ -113,6 +113,10 @@ export default function HomePage() {
         position: "top-right",
         autoClose: 3000,
       });
+      // TEAM_003: หลังซิงค์สำเร็จ รอ 3 วินาทีแล้ว reload หน้า /home หนึ่งครั้ง
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
       
     } catch (error: any) {
       console.error('❌ Sync error:', error);

@@ -265,6 +265,7 @@ export default function HomePage() {
           moneyYear={moneyYear}
           refreshVersion={refreshVersion}
           session={session}
+          selectedDistrictScope={selectedDistrictScope}
         />
       </main>
     </div>

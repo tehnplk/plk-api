@@ -95,6 +95,7 @@ interface KPITableProps {
   disableDatabaseFetch?: boolean; // New prop to disable Prisma database fetching
   disableDepartmentFiltering?: boolean; // New prop to disable actual department filtering
   session?: any;
+  selectedDistrictScope?: string;
 }
 
 const KPITable: React.FC<KPITableProps> = ({
@@ -109,6 +110,7 @@ const KPITable: React.FC<KPITableProps> = ({
   disableDatabaseFetch = false, // Default to false for backward compatibility
   disableDepartmentFiltering = false, // Default to false for backward compatibility
   session,
+  selectedDistrictScope,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('ทั้งหมด');
@@ -211,8 +213,27 @@ const KPITable: React.FC<KPITableProps> = ({
       setLoading(true);
       setError(null);
 
-      console.log('🔄 Fetching data from database...');
-      const response = await fetch('/api/kpi/database');
+      // TEAM_001: When a specific district is selected from Home, load KPI data from kpi_report
+      const isDistrictScope =
+        selectedDistrictScope && selectedDistrictScope !== 'ALL';
+
+      let url = '/api/kpi/database';
+
+      if (isDistrictScope) {
+        const params = new URLSearchParams();
+        params.set('moneyYear', String(moneyYear));
+        params.set('areaName', selectedDistrictScope as string);
+        if (selectedDepartment && selectedDepartment !== 'ทั้งหมด') {
+          params.set('department', selectedDepartment);
+        }
+        if (selectedKpiType && selectedKpiType !== 'ทั้งหมด') {
+          params.set('kpiType', selectedKpiType);
+        }
+        url = `/api/kpi/report/kpi-list?${params.toString()}`;
+      }
+
+      console.log('🔄 Fetching data from URL:', url);
+      const response = await fetch(url);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -293,7 +314,7 @@ const KPITable: React.FC<KPITableProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [data]);
+  }, [data, selectedDistrictScope, moneyYear]);
 
   // Refetch data when refreshVersion changes (triggered by navbar sync)
   useEffect(() => {

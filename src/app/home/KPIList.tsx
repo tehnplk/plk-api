@@ -8,6 +8,7 @@ interface KPIListProps {
   moneyYear: number;
   refreshVersion: number;
   session: any;
+  selectedDistrictScope: string;
 }
 
 export default function KPIList({
@@ -15,6 +16,7 @@ export default function KPIList({
   moneyYear,
   refreshVersion,
   session,
+  selectedDistrictScope,
 }: KPIListProps) {
   return (
     <div id="kpi-table-section">
@@ -25,6 +27,7 @@ export default function KPIList({
         showHeaderSummary
         showRowCountSummary
         session={session}
+        selectedDistrictScope={selectedDistrictScope}
       />
     </div>
   );

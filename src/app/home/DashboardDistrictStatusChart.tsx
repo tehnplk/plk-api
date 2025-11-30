@@ -44,6 +44,13 @@ const DashboardDistrictStatusChart: React.FC<DistrictStatusChartProps> = ({
   districtComparisonData,
   theme,
 }) => {
+  const maxTotal = React.useMemo(() => {
+    if (!districtComparisonData || districtComparisonData.length === 0) {
+      return 0;
+    }
+    return Math.max(...districtComparisonData.map((item) => item.total));
+  }, [districtComparisonData]);
+
   return (
     <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
       <div className="flex justify-between items-center mb-4">
@@ -69,7 +76,11 @@ const DashboardDistrictStatusChart: React.FC<DistrictStatusChartProps> = ({
               textAnchor="end"
               height={60}
             />
-            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+            <YAxis
+              tick={{ fontSize: 12 }}
+              allowDecimals={false}
+              domain={[0, maxTotal || 0]}
+            />
             <Tooltip
               contentStyle={{
                 borderRadius: "8px",

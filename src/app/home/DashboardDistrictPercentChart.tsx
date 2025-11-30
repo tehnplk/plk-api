@@ -68,7 +68,7 @@ const DashboardDistrictPercentChart: React.FC<DistrictPercentChartProps> = ({
               textAnchor="end"
               height={60}
             />
-            <YAxis tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
             <Tooltip
               contentStyle={{
                 borderRadius: "8px",

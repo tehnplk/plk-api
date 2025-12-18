@@ -160,15 +160,17 @@ export default function AdminKpisClient({ initialKpis }: Props) {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 upเเpercase tracking-wider">Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area Level</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="sticky right-0 z-10 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.25)]">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
               {kpis.map((kpi) => (
-                <tr key={kpi.id} className="hover:bg-gray-50">
+                <tr key={kpi.id} className="group hover:bg-gray-50">
                   <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{kpi.id}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <div className="max-w-md truncate" title={kpi.name}>
@@ -178,7 +180,7 @@ export default function AdminKpisClient({ initialKpis }: Props) {
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{kpi.kpi_type}</td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{kpi.area_level}</td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{kpi.ssj_department}</td>
-                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
+                  <td className="sticky right-0 bg-white px-6 py-4 text-right text-sm shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.25)] group-hover:bg-gray-50">
                     <div className="inline-flex items-center gap-2">
                       <button
                         type="button"

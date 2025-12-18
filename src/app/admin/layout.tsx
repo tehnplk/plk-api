@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/authConfig';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
-import { ArrowLeft, Home, LayoutGrid, Shield } from 'lucide-react';
+import { ArrowLeft, Home, Shield } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +26,19 @@ export default async function AdminLayout({
     try {
       const parsedProfile = typeof profile === 'string' ? JSON.parse(profile) : profile;
       providerId = parsedProfile.provider_id || parsedProfile.sub || parsedProfile.id || session.user.name;
+
+      const thFullName = [parsedProfile.title_th, parsedProfile.name_th]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      const enFullName = [parsedProfile.title_en, parsedProfile.name_eng]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
       displayName =
+        thFullName ||
+        enFullName ||
         parsedProfile.full_name_th ||
         parsedProfile.full_name ||
         parsedProfile.name ||
@@ -92,14 +104,6 @@ export default async function AdminLayout({
                   </div>
                 </div>
               </div>
-
-              <Link
-                href="/admin"
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <LayoutGrid className="h-4 w-4 text-gray-500" />
-                Admin
-              </Link>
 
               <Link
                 href="/home"

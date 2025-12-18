@@ -5,8 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Session } from 'next-auth';
 import { signOut } from 'next-auth/react';
-import { LayoutDashboard, LogIn, User, FileText, RefreshCw, ChevronDown, Users, Menu, X, MapPin } from 'lucide-react';
-import { signInWithHealthId } from '../actions/sign-in';
+import { LayoutDashboard, LogIn, User, FileText, RefreshCw, ChevronDown, Menu, X, MapPin } from 'lucide-react';
 import { VERSION } from '../../config/version';
 
 interface HomeNavbarProps {
@@ -51,9 +50,6 @@ export default function HomeNavbar({
       return {};
     }
   }, [session]);
-
-  // Extract position/department from parsed profile
-  const userDepartment = userProfile?.organization?.[0]?.position || '';
 
   const handleLogout = () => {
     // Perform logout
@@ -206,22 +202,12 @@ export default function HomeNavbar({
                   </Link>
                   {userRole === 'admin' && (
                     <Link
-                      href="/admin/account"
-                      onClick={() => setIsDropdownOpen(false)}
-                      className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
-                    >
-                      <Users size={16} />
-                      จัดการผู้ใช้
-                    </Link>
-                  )}
-                  {userRole === 'admin' && (
-                    <Link
-                      href="/admin/db-manage"
+                      href="/admin"
                       onClick={() => setIsDropdownOpen(false)}
                       className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
                     >
                       <LayoutDashboard size={16} />
-                      จัดการข้อมูล
+                      ระบบแอดมิน
                     </Link>
                   )}
                   <button
@@ -321,22 +307,12 @@ export default function HomeNavbar({
               </Link>
               {userRole === 'admin' && (
                 <Link
-                  href="/admin/account"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
-                >
-                  <Users size={16} />
-                  จัดการผู้ใช้
-                </Link>
-              )}
-              {userRole === 'admin' && (
-                <Link
-                  href="/admin/db-manage"
+                  href="/admin"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
                 >
                   <LayoutDashboard size={16} />
-                  จัดการข้อมูล
+                  ระบบแอดมิน
                 </Link>
               )}
               <button

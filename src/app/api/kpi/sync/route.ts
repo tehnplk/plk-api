@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 const ENDPOINT_URL = process.env.ENDPOINT_URL;
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
                     typeof item.target_result === 'string' ? parseFloat(item.target_result) || 0 : 0,
       divide_number: typeof item.divide_number === 'number' ? item.divide_number : 
                     typeof item.divide_number === 'string' ? parseFloat(item.divide_number) || 100 : 100,
-      sum_result: String(item.sum_result ?? ''),
+      sum_result: null,
       excellence: String(item.excellence ?? ''),
       area_level: String(item.area_level ?? ''),
       ssj_department: String(item.ssj_department ?? ''),

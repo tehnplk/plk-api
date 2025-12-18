@@ -179,24 +179,41 @@ export default function KPIDetailModal({
             const realData = result.reports || [];
             
             if (realData.length > 0) {
-              // Process real data from database
-              districtTableData = realData.map((record: any) => {
-                const monthlyValues = MONTH_FIELDS.map(field => 
-                  record[field] !== null && record[field] !== undefined 
-                    ? Number(record[field]) 
+              const isDistrictLevel = kpiMetadata?.area_level === 'อำเภอ';
+              const isProvinceLevel = kpiMetadata?.area_level === 'จังหวัด';
+              const PROVINCE_AREA_NAME = 'จังหวัดพิษณุโลก';
+
+              console.log('DEBUG KPI Modal:', {
+                kpiId,
+                area_level: kpiMetadata?.area_level,
+                isDistrictLevel,
+                isProvinceLevel,
+                realDataCount: realData.length,
+                realDataAreas: realData.map(r => r.area_name)
+              });
+
+              const computeRowFromRecord = (record: any, overrideAreaName?: string): DistrictData => {
+                const monthlyValues = MONTH_FIELDS.map((field) =>
+                  record[field] !== null && record[field] !== undefined
+                    ? Number(record[field])
                     : null
                 );
-                
+
                 const total = monthlyValues.reduce((sum: number, val) => sum + (val || 0), 0);
-                const target = record.kpi_target !== null && record.kpi_target !== undefined 
-                  ? Number(record.kpi_target) 
-                  : null;
-                const divideNumber = kpiMetadata?.divide_number !== null && kpiMetadata?.divide_number !== undefined 
-                  ? Number(kpiMetadata.divide_number) 
-                  : 1;
-                const rate = target !== null && target !== undefined && target > 0
-                  ? Math.round((total / target) * divideNumber * 100) / 100
-                  : 0;
+                const target =
+                  record.kpi_target !== null && record.kpi_target !== undefined
+                    ? Number(record.kpi_target)
+                    : null;
+
+                const divideNumber =
+                  kpiMetadata?.divide_number !== null && kpiMetadata?.divide_number !== undefined
+                    ? Number(kpiMetadata.divide_number)
+                    : 1;
+
+                const rate =
+                  target !== null && target !== undefined && target > 0
+                    ? Math.round((total / target) * divideNumber * 100) / 100
+                    : 0;
 
                 // คำนวณสถานะแยกรายพื้นที่
                 const conditionStr = (kpiMetadata?.condition ?? '').toString().trim();
@@ -218,29 +235,84 @@ export default function KPIDetailModal({
                     rate
                   );
                 }
-                
+
                 return {
-                  area_name: record.area_name,
+                  area_name: overrideAreaName ?? record.area_name,
                   target,
                   monthlyValues,
                   total,
                   rate,
                   status,
                 };
+              };
+
+              const emptyRow = (areaName: string): DistrictData => ({
+                area_name: areaName,
+                target: null,
+                monthlyValues: MONTH_FIELDS.map(() => null),
+                total: 0,
+                rate: 0,
+                status: 'pending',
               });
 
-              // Create aggregated chart data (sum of all districts)
-              chartData = MONTH_NAMES.map((month, index) => {
-                const monthlySum = realData.reduce((sum: number, record: any) => {
-                  const value = record[MONTH_FIELDS[index]];
-                  return sum + (value !== null && value !== undefined ? Number(value) : 0);
-                }, 0);
-                
-                return {
-                  month,
-                  value: monthlySum > 0 ? monthlySum : null,
-                };
-              });
+              if (isDistrictLevel) {
+                const recordMap = new Map<string, any>();
+                realData.forEach((r: any) => {
+                  recordMap.set(String(r.area_name), r);
+                });
+
+                const merged: DistrictData[] = DISTRICTS.map((districtName) => {
+                  const record = recordMap.get(districtName);
+                  return record ? computeRowFromRecord(record) : emptyRow(districtName);
+                });
+
+                const extras = realData
+                  .map((r: any) => String(r.area_name))
+                  .filter((name: string) => !DISTRICTS.includes(name));
+
+                extras.forEach((name: string) => {
+                  const record = recordMap.get(name);
+                  if (record) merged.push(computeRowFromRecord(record));
+                });
+
+                districtTableData = merged;
+              } else if (isProvinceLevel) {
+                const provinceRecord =
+                  realData.find((r: any) => String(r.area_name).includes('จังหวัด')) ?? realData[0];
+
+                if (!provinceRecord) {
+                  throw new Error('No province record');
+                }
+
+                districtTableData = [computeRowFromRecord(provinceRecord, PROVINCE_AREA_NAME)];
+              } else {
+                // Process real data from database
+                districtTableData = realData.map((record: any) => computeRowFromRecord(record));
+              }
+
+              if (isProvinceLevel) {
+                const provinceRow = districtTableData[0];
+                chartData = MONTH_NAMES.map((month, index) => {
+                  const value = provinceRow?.monthlyValues?.[index];
+                  return {
+                    month,
+                    value: value !== null && value !== undefined ? value : null,
+                  };
+                });
+              } else {
+                // Create aggregated chart data (sum of all districts)
+                chartData = MONTH_NAMES.map((month, index) => {
+                  const monthlySum = realData.reduce((sum: number, record: any) => {
+                    const value = record[MONTH_FIELDS[index]];
+                    return sum + (value !== null && value !== undefined ? Number(value) : 0);
+                  }, 0);
+                  
+                  return {
+                    month,
+                    value: monthlySum > 0 ? monthlySum : null,
+                  };
+                });
+              }
             } else {
               // No real data found, use mockup
               throw new Error('No real data found');
@@ -253,7 +325,8 @@ export default function KPIDetailModal({
 
           // สร้างแถวว่างสำหรับให้ user กรอกเอง ตามระดับตัวชี้วัด
           const isDistrictLevel = kpiMetadata?.area_level === 'อำเภอ';
-          const areaNames = isDistrictLevel ? DISTRICTS : ['จังหวัด'];
+          const isProvinceLevel = kpiMetadata?.area_level === 'จังหวัด';
+          const areaNames = isDistrictLevel ? DISTRICTS : isProvinceLevel ? ['จังหวัดพิษณุโลก'] : ['จังหวัด'];
 
           districtTableData = areaNames.map((areaName: string) => ({
             area_name: areaName,
@@ -815,7 +888,10 @@ export default function KPIDetailModal({
                           {[...districtData].sort((a, b) => {
                             const aIndex = DISTRICTS.indexOf(a.area_name);
                             const bIndex = DISTRICTS.indexOf(b.area_name);
-                            return aIndex - bIndex;
+                            const aKey = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex;
+                            const bKey = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
+                            if (aKey !== bKey) return aKey - bKey;
+                            return a.area_name.localeCompare(b.area_name, 'th');
                           }).map((district) => (
                             <option key={district.area_name} value={district.area_name}>
                               {district.area_name}

@@ -189,7 +189,7 @@ export default function KPIDetailModal({
                 isDistrictLevel,
                 isProvinceLevel,
                 realDataCount: realData.length,
-                realDataAreas: realData.map(r => r.area_name)
+                realDataAreas: realData.map((r: any) => r.area_name)
               });
 
               const computeRowFromRecord = (record: any, overrideAreaName?: string): DistrictData => {

@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
-import Link from "next/link";
-import { ArrowLeft, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -234,25 +233,17 @@ export default function AccountPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: THEME.bg }}>
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-green-100">
-        <div className="container mx-auto px-4 h-16 flex items-center gap-4">
-          <Link
-            href="/home"
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft size={24} className="text-green-600" />
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold shadow">
-              <Users size={20} />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-800">จัดการบัญชีผู้ใช้</h1>
-              <p className="text-xs text-gray-500">รายการผู้ใช้งานทั้งหมด {users.length} คน</p>
-            </div>
+      <div className="max-w-7xl mx-auto px-4 pt-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold shadow">
+            <Users size={20} />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-800">จัดการบัญชีผู้ใช้</h1>
+            <p className="text-xs text-gray-500">รายการผู้ใช้งานทั้งหมด {users.length} คน</p>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Search */}
       <div className="max-w-7xl mx-auto px-4 py-4">

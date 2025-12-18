@@ -206,7 +206,7 @@ export default function HomeNavbar({
                   </Link>
                   {userRole === 'admin' && (
                     <Link
-                      href="/account"
+                      href="/admin/account"
                       onClick={() => setIsDropdownOpen(false)}
                       className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
                     >
@@ -216,7 +216,7 @@ export default function HomeNavbar({
                   )}
                   {userRole === 'admin' && (
                     <Link
-                      href="/db-manage"
+                      href="/admin/db-manage"
                       onClick={() => setIsDropdownOpen(false)}
                       className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
                     >
@@ -321,7 +321,7 @@ export default function HomeNavbar({
               </Link>
               {userRole === 'admin' && (
                 <Link
-                  href="/account"
+                  href="/admin/account"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
                 >
@@ -331,7 +331,7 @@ export default function HomeNavbar({
               )}
               {userRole === 'admin' && (
                 <Link
-                  href="/db-manage"
+                  href="/admin/db-manage"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
                 >

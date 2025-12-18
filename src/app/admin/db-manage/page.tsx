@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
-import { Database, RefreshCw, Trash2, Eye, ArrowLeft } from 'lucide-react';
+import { Database, RefreshCw, Trash2, Eye } from 'lucide-react';
 
 interface DbTable {
   name: string;
@@ -184,27 +183,19 @@ export default function DbManagePage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F3F4F6' }}>
       {/* Header แบบเดียวกับหน้า /account */}
-      <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-green-100">
-        <div className="container mx-auto px-4 h-16 flex items-center gap-4">
-          <Link
-            href="/home"
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft size={24} className="text-green-600" />
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold shadow">
-              <Database size={20} />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-800">จัดการฐานข้อมูล</h1>
-              <p className="text-xs text-gray-500">
-                ตารางข้อมูลหลัก {tables.length} ตาราง
-              </p>
-            </div>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold shadow">
+            <Database size={20} />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-800">จัดการฐานข้อมูล</h1>
+            <p className="text-xs text-gray-500">
+              ตารางข้อมูลหลัก {tables.length} ตาราง
+            </p>
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="bg-white shadow rounded-lg overflow-hidden">

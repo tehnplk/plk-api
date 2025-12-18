@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import KpiFormFields from './KpiFormFields';
 import { createKpiMutation, deleteKpiMutation, updateKpiMutation } from '../actions';
@@ -72,6 +73,7 @@ export default function AdminKpisClient({ initialKpis }: Props) {
       }
 
       setBanner({ type: 'success', text: 'Updated successfully' });
+      toast.success('Updated successfully');
       closeFormModal();
       router.refresh();
       return;

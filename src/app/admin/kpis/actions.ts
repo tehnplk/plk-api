@@ -2,7 +2,6 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { auth } from '@/authConfig';
 
 async function checkAdminRole() {
@@ -51,25 +50,6 @@ export async function getKpis() {
   }
 }
 
-export async function getKpiById(id: string) {
-  try {
-    await checkAdminRole();
-    const kpi = await prisma.kpis.findUnique({
-      where: { id }
-    });
-    
-    if (!kpi) {
-      return { success: false, error: 'KPI not found' };
-    }
-    
-    return { success: true, data: kpi };
-  } catch (error) {
-    console.error('Failed to fetch KPI:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return { success: false, error: `Failed to fetch KPI: ${errorMessage}` };
-  }
-}
-
 async function createKpi(formData: FormData) {
   try {
     await checkAdminRole();
@@ -113,14 +93,6 @@ async function createKpi(formData: FormData) {
   }
 }
 
-export async function createKpiAction(formData: FormData) {
-  const result = await createKpi(formData);
-  if (result.success) {
-    redirect(`/admin/kpis?success=${encodeURIComponent('Created successfully')}`);
-  }
-  redirect(`/admin/kpis?error=${encodeURIComponent(result.error ?? 'Create failed')}`);
-}
-
 export async function createKpiMutation(formData: FormData) {
   return createKpi(formData);
 }
@@ -159,14 +131,6 @@ async function updateKpi(id: string, formData: FormData) {
   }
 }
 
-export async function updateKpiAction(id: string, formData: FormData) {
-  const result = await updateKpi(id, formData);
-  if (result.success) {
-    redirect(`/admin/kpis?success=${encodeURIComponent('Updated successfully')}`);
-  }
-  redirect(`/admin/kpis?error=${encodeURIComponent(result.error ?? 'Update failed')}`);
-}
-
 export async function updateKpiMutation(id: string, formData: FormData) {
   return updateKpi(id, formData);
 }
@@ -194,14 +158,6 @@ async function deleteKpi(id: string) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, error: `Failed to delete KPI: ${errorMessage}` };
   }
-}
-
-export async function deleteKpiAction(id: string, _formData?: FormData) {
-  const result = await deleteKpi(id);
-  if (result.success) {
-    redirect(`/admin/kpis?success=${encodeURIComponent('Deleted successfully')}`);
-  }
-  redirect(`/admin/kpis?error=${encodeURIComponent(result.error ?? 'Delete failed')}`);
 }
 
 export async function deleteKpiMutation(id: string) {

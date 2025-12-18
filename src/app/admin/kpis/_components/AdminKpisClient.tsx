@@ -188,7 +188,7 @@ export default function AdminKpisClient({ initialKpis }: Props) {
                         onClick={() => handleOpenEdit(kpi)}
                         aria-label="Edit"
                         title="Edit"
-                        className="inline-flex items-center justify-center rounded-md p-2 text-blue-700 hover:bg-blue-50"
+                        className="inline-flex items-center justify-center rounded-md p-2 text-blue-700 hover:bg-blue-50 cursor-pointer"
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
@@ -199,7 +199,7 @@ export default function AdminKpisClient({ initialKpis }: Props) {
                         }}
                         aria-label="Delete"
                         title="Delete"
-                        className="inline-flex items-center justify-center rounded-md p-2 text-red-700 hover:bg-red-50"
+                        className="inline-flex items-center justify-center rounded-md p-2 text-red-700 hover:bg-red-50 cursor-pointer"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

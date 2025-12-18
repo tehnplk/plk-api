@@ -160,12 +160,13 @@ export default function AdminKpisClient({ initialKpis }: Props) {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 upเเpercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area Level</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-              <th className="sticky right-0 z-10 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.25)]">
-                <span className="sr-only">Actions</span>
-              </th>
+              <th
+                aria-label="Actions"
+                className="sticky right-0 z-10 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.25)]"
+              />
             </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
@@ -185,20 +186,22 @@ export default function AdminKpisClient({ initialKpis }: Props) {
                       <button
                         type="button"
                         onClick={() => handleOpenEdit(kpi)}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-blue-700 hover:bg-blue-50"
+                        aria-label="Edit"
+                        title="Edit"
+                        className="inline-flex items-center justify-center rounded-md p-2 text-blue-700 hover:bg-blue-50"
                       >
                         <Pencil className="h-4 w-4" />
-                        Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => {
                           void confirmDelete(kpi);
                         }}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-red-700 hover:bg-red-50"
+                        aria-label="Delete"
+                        title="Delete"
+                        className="inline-flex items-center justify-center rounded-md p-2 text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
-                        Delete
                       </button>
                     </div>
                   </td>

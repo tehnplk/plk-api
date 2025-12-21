@@ -1,4 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+
+interface Department {
+  id: string;
+  name: string;
+  activate: boolean;
+}
 
 export default function KpiFormFields({
   mode,
@@ -7,11 +13,33 @@ export default function KpiFormFields({
   mode: 'create' | 'edit';
   kpi?: any;
 }) {
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>(kpi?.ssj_department ?? '');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        setIsLoading(true);
+        const res = await fetch('/api/department');
+        const data = await res.json();
+        if (data.success) {
+          setDepartments(data.data.filter((d: Department) => d.activate));
+        }
+      } catch (error) {
+        console.error('Error fetching departments:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDepartments();
+  }, []);
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">KPI ID *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">รหัสตัวชี้วัด *</label>
           <input
             type="text"
             name="id"
@@ -23,7 +51,7 @@ export default function KpiFormFields({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Area Level *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ระดับพื้นที่ *</label>
           <select
             name="area_level"
             defaultValue={kpi?.area_level ?? 'อำเภอ'}
@@ -37,7 +65,7 @@ export default function KpiFormFields({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">KPI Name *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อตัวชี้วัด *</label>
         <textarea
           name="name"
           defaultValue={kpi?.name ?? ''}
@@ -48,7 +76,7 @@ export default function KpiFormFields({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Evaluation Criteria *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">เกณฑ์การประเมิน *</label>
         <textarea
           name="evaluation_criteria"
           defaultValue={kpi?.evaluation_criteria ?? ''}
@@ -59,7 +87,7 @@ export default function KpiFormFields({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Condition *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">เงื่อนไข *</label>
         <input
           type="text"
           name="condition"
@@ -71,7 +99,7 @@ export default function KpiFormFields({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Target Result *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ค่าเป้าหมาย *</label>
           <input
             type="number"
             step="0.01"
@@ -83,7 +111,7 @@ export default function KpiFormFields({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Divide Number</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ตัวหาร</label>
           <input
             type="number"
             step="0.01"
@@ -96,7 +124,7 @@ export default function KpiFormFields({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Excellence *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ยุทธศาสตร์ *</label>
           <input
             type="text"
             name="excellence"
@@ -107,33 +135,38 @@ export default function KpiFormFields({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">KPI Type *</label>
-          <select
+          <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทตัวชี้วัด</label>
+          <input
+            type="text"
             name="kpi_type"
-            defaultValue={kpi?.kpi_type ?? 'ตัวชี้วัดจังหวัด'}
-            required
+            defaultValue={kpi?.kpi_type ?? ''}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="ตัวชี้วัดจังหวัด">ตัวชี้วัดจังหวัด</option>
-            <option value="ตรวจราชการ">ตรวจราชการ</option>
-          </select>
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">SSJ Department *</label>
-          <input
-            type="text"
+          <label className="block text-sm font-medium text-gray-700 mb-1">กลุ่มงาน สสจ. *</label>
+          <select
             name="ssj_department"
-            defaultValue={kpi?.ssj_department ?? ''}
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          />
+            disabled={isLoading}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+          >
+            <option value="">{isLoading ? '-- กำลังโหลด... --' : '-- เลือกกลุ่มงาน --'}</option>
+            {departments.map((dept) => (
+              <option key={dept.id} value={dept.name}>
+                {dept.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">SSJ PM</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ผู้รับผิดชอบ สสจ.</label>
           <input
             type="text"
             name="ssj_pm"
@@ -145,7 +178,7 @@ export default function KpiFormFields({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">MOPH Department</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">หน่วยงาน กสธ.</label>
           <input
             type="text"
             name="moph_department"
@@ -157,21 +190,11 @@ export default function KpiFormFields({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Template URL</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">ลิงก์เทมเพลต</label>
         <input
           type="url"
           name="template_url"
           defaultValue={kpi?.template_url ?? ''}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Sum Result</label>
-        <input
-          type="text"
-          name="sum_result"
-          defaultValue={kpi?.sum_result ?? ''}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
         />
       </div>

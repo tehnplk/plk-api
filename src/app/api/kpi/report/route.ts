@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       select: {
         condition: true,
         target_result: true,
+        area_level: true,
       },
     });
 
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
         },
         update: {
           kpi_name: kpiName || '',
+          area_level: kpiMeta?.area_level ?? null,
           kpi_target: target,
           result_oct: monthlyResults[0],
           result_nov: monthlyResults[1],
@@ -109,6 +111,7 @@ export async function POST(request: NextRequest) {
           area_name: areaName,
           kpi_id: kpiId,
           kpi_name: kpiName || '',
+          area_level: kpiMeta?.area_level ?? null,
           kpi_target: target,
           result_oct: monthlyResults[0],
           result_nov: monthlyResults[1],

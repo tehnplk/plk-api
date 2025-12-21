@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-const MAX_LIMIT = 100;
+const MAX_LIMIT = 1000;
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,7 +40,14 @@ export async function GET(request: NextRequest) {
         );
     }
 
-    const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+    let columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+
+    // Reorder columns for kpi_report to place area_level after money_year
+    if (table === 'kpi_report' && columns.length > 0) {
+      const desiredOrder = ['money_year', 'area_level', 'area_name'];
+      const otherColumns = columns.filter(col => !desiredOrder.includes(col));
+      columns = [...desiredOrder.filter(col => columns.includes(col)), ...otherColumns];
+    }
 
     return NextResponse.json({
       success: true,

@@ -58,6 +58,30 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Calculate sum of kpi_target for each KPI across all areas
+    const kpiTargetSums = await Promise.all(
+      kpis.map(async (kpi) => {
+        const targetSum = await prisma.kpiReport.aggregate({
+          where: {
+            kpi_id: kpi.id,
+            money_year: moneyYear
+          },
+          _sum: {
+            kpi_target: true
+          }
+        });
+        
+        return {
+          kpi_id: kpi.id,
+          sum_kpi_target: targetSum._sum.kpi_target || 0
+        };
+      })
+    );
+
+    const targetSumMap = new Map(
+      kpiTargetSums.map(item => [item.kpi_id, item.sum_kpi_target])
+    );
+
     const reportMap = new Map<string, (typeof reports)[number]>();
     for (const r of reports) {
       reportMap.set(r.kpi_id, r);
@@ -84,6 +108,7 @@ export async function GET(request: NextRequest) {
         evaluation_criteria: kpi.evaluation_criteria,
         condition: kpi.condition,
         target_result: kpi.target_result,
+        sum_kpi_target: targetSumMap.get(kpi.id) || 0,
         divide_number: kpi.divide_number,
         sum_result: sumResult,
         excellence: kpi.excellence,
@@ -92,7 +117,6 @@ export async function GET(request: NextRequest) {
         ssj_pm: kpi.ssj_pm,
         moph_department: kpi.moph_department,
         kpi_type: kpi.kpi_type,
-        grade: kpi.grade,
         template_url: kpi.template_url,
         last_synced_at: lastSyncedAt,
       };

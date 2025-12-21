@@ -46,7 +46,6 @@ export default function HomePage() {
   const [refreshVersion, setRefreshVersion] = useState(0);
   const { data: session, status } = useSession();
   const [isKpiLoading, setIsKpiLoading] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
   const [userDepartment, setUserDepartment] = useState<string>('ทั้งหมด');
 
@@ -85,49 +84,7 @@ export default function HomePage() {
     }
   };
 
-  // Sync KPI data from Google Sheets to database
-  const handleSyncFromGoogleSheets = async () => {
-    try {
-      console.log('🔄 Starting sync from Google Sheets...');
-      setIsSyncing(true);
-      
-      const response = await fetch('/api/kpi/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Sync failed');
-      }
-      
-      const result = await response.json();
-      console.log('✅ Sync successful:', result);
-      
-      // Trigger refresh in KPIList by incrementing refresh version
-      setRefreshVersion((prev) => prev + 1);
-      
-      toast.success("ซิงค์ข้อมูลจาก Google Sheets สำเร็จ", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      // TEAM_003: หลังซิงค์สำเร็จ รอ 3 วินาทีแล้ว reload หน้า /home หนึ่งครั้ง
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-      
-    } catch (error: any) {
-      console.error('❌ Sync error:', error);
-      toast.error(error?.message || 'การซิงค์ข้อมูลล้มเหลว', {
-        position: "top-right",
-        autoClose: 5000,
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
+
 
   useEffect(() => {
     setMounted(true);
@@ -248,8 +205,7 @@ export default function HomePage() {
         moneyYear={moneyYear}
         session={session}
         displayName={displayName}
-        onSync={handleSyncFromGoogleSheets}
-        isSyncing={isSyncing}
+
         selectedDistrict={selectedDistrictScope}
         onDistrictChange={handleDistrictChange}
         districtOptions={DISTRICTS}

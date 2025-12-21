@@ -23,6 +23,13 @@ export default function DbManagePage() {
   const [viewLoading, setViewLoading] = useState(false);
   const [viewError, setViewError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [filteredRows, setFilteredRows] = useState<any[]>([]);
+  const [filterKpiId, setFilterKpiId] = useState('');
+  const [filterKpiName, setFilterKpiName] = useState('');
+  const [filterAreaLevel, setFilterAreaLevel] = useState('');
+  const [filterReportKpiId, setFilterReportKpiId] = useState('');
+  const [filterReportYear, setFilterReportYear] = useState('');
+  const [filterReportAreaLevel, setFilterReportAreaLevel] = useState('');
 
   const loadTables = async () => {
     try {
@@ -46,6 +53,105 @@ export default function DbManagePage() {
   useEffect(() => {
     loadTables();
   }, []);
+
+  useEffect(() => {
+    if (viewTable?.name === 'kpis' || viewTable?.name === 'kpi_report') {
+      applyFilters();
+    } else {
+      setFilteredRows([]);
+    }
+  }, [
+    viewRows,
+    viewTable?.name,
+    filterKpiId,
+    filterKpiName,
+    filterAreaLevel,
+    filterReportKpiId,
+    filterReportYear,
+    filterReportAreaLevel,
+  ]);
+
+  const applyFilters = () => {
+    if (viewTable?.name === 'kpis') {
+      let filtered = viewRows;
+
+      if (filterKpiId.trim()) {
+        filtered = filtered.filter((row) =>
+          String(row.id || '')
+            .toLowerCase()
+            .includes(filterKpiId.toLowerCase())
+        );
+      }
+
+      if (filterKpiName.trim()) {
+        filtered = filtered.filter((row) =>
+          String(row.name || '')
+            .toLowerCase()
+            .includes(filterKpiName.toLowerCase())
+        );
+      }
+
+      if (filterAreaLevel.trim()) {
+        filtered = filtered.filter((row) => row.area_level === filterAreaLevel);
+      }
+
+      setFilteredRows(filtered);
+      return;
+    }
+
+    if (viewTable?.name === 'kpi_report') {
+      let filtered = viewRows;
+
+      if (filterReportKpiId.trim()) {
+        filtered = filtered.filter((row) =>
+          String(row.kpi_id || '')
+            .toLowerCase()
+            .includes(filterReportKpiId.toLowerCase())
+        );
+      }
+
+      if (filterReportYear.trim()) {
+        filtered = filtered.filter(
+          (row) => String(row.money_year || '') === String(filterReportYear)
+        );
+      }
+
+      if (filterReportAreaLevel.trim()) {
+        filtered = filtered.filter((row) => row.area_level === filterReportAreaLevel);
+      }
+
+      setFilteredRows(filtered);
+      return;
+    }
+
+    setFilteredRows([]);
+  };
+
+  const clearFilters = () => {
+    if (viewTable?.name === 'kpis') {
+      setFilterKpiId('');
+      setFilterKpiName('');
+      setFilterAreaLevel('');
+      return;
+    }
+
+    if (viewTable?.name === 'kpi_report') {
+      setFilterReportKpiId('');
+      setFilterReportYear('');
+      setFilterReportAreaLevel('');
+      return;
+    }
+  };
+
+  const resetAllFilters = () => {
+    setFilterKpiId('');
+    setFilterKpiName('');
+    setFilterAreaLevel('');
+    setFilterReportKpiId('');
+    setFilterReportYear('');
+    setFilterReportAreaLevel('');
+    setFilteredRows([]);
+  };
 
   const handleClear = async (table: DbTable) => {
     // TODO: เชื่อมต่อ API ล้างข้อมูลตาราง
@@ -154,8 +260,12 @@ export default function DbManagePage() {
       setViewError(null);
       setViewRows([]);
       setViewColumns([]);
+      resetAllFilters();
 
-      const res = await fetch(`/api/db/table-rows?table=${encodeURIComponent(table.name)}`);
+      const limitParam = table.name === 'kpi_report' ? '&limit=1000' : '';
+      const res = await fetch(
+        `/api/db/table-rows?table=${encodeURIComponent(table.name)}${limitParam}`
+      );
       const data = await res.json();
 
       if (data.success) {
@@ -178,7 +288,23 @@ export default function DbManagePage() {
     setViewColumns([]);
     setViewError(null);
     setViewLoading(false);
+    resetAllFilters();
   };
+
+  const isFilterableTable = viewTable?.name === 'kpis' || viewTable?.name === 'kpi_report';
+  const displayedRows = isFilterableTable ? filteredRows : viewRows;
+  const displayedCount = isFilterableTable ? filteredRows.length : viewRows.length;
+  const totalCount = viewRows.length;
+  const reportYearOptions =
+    viewTable?.name === 'kpi_report'
+      ? Array.from(
+          new Set(
+            viewRows
+              .map((r) => (r?.money_year === null || r?.money_year === undefined ? '' : String(r.money_year)))
+              .filter(Boolean)
+          )
+        ).sort((a, b) => Number(b) - Number(a))
+      : [];
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F3F4F6' }}>
@@ -311,7 +437,7 @@ export default function DbManagePage() {
                 <h2 className="text-sm font-semibold text-gray-900">
                   แสดงข้อมูลตาราง: {viewTable.label}
                 </h2>
-                <p className="text-xs text-gray-400">{viewTable.name} (แสดงสูงสุด 100 แถว)</p>
+                <p className="text-xs text-gray-400">{viewTable.name} (แสดง {displayedCount} แถวจาก {totalCount} แถวทั้งหมด)</p>
               </div>
               <button
                 type="button"
@@ -334,9 +460,104 @@ export default function DbManagePage() {
                 กำลังโหลดข้อมูล...
               </div>
             ) : (
-              <div className="flex-1 overflow-auto">
+              <div className="flex-1 overflow-auto flex flex-col">
+                {/* Filter Section - แสดงเฉพาะตาราง kpis */}
+                {viewTable.name === 'kpis' && (
+                  <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                    <div className="text-xs font-medium text-gray-700 mb-2">กรองข้อมูล KPI</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="ค้นหา KPI ID (เช่น KPI01)"
+                          value={filterKpiId}
+                          onChange={(e) => setFilterKpiId(e.target.value)}
+                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="ค้นหา ชื่อ KPI"
+                          value={filterKpiName}
+                          onChange={(e) => setFilterKpiName(e.target.value)}
+                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex gap-1">
+                        <select
+                          value={filterAreaLevel}
+                          onChange={(e) => setFilterAreaLevel(e.target.value)}
+                          className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">-- ทั้งหมด --</option>
+                          <option value="จังหวัด">จังหวัด</option>
+                          <option value="อำเภอ">อำเภอ</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={clearFilters}
+                          className="px-2 py-1.5 text-xs font-medium border border-gray-300 text-gray-700 bg-white hover:bg-gray-100 rounded-md"
+                        >
+                          ล้าง
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Filter Section - ตาราง kpi_report */}
+                {viewTable.name === 'kpi_report' && (
+                  <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                    <div className="text-xs font-medium text-gray-700 mb-2">กรองข้อมูลรายงานผล (kpi_report)</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="ค้นหา KPI ID (เช่น KPI01)"
+                          value={filterReportKpiId}
+                          onChange={(e) => setFilterReportKpiId(e.target.value)}
+                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <select
+                          value={filterReportYear}
+                          onChange={(e) => setFilterReportYear(e.target.value)}
+                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">-- ทุกปีงบประมาณ --</option>
+                          {reportYearOptions.map((y) => (
+                            <option key={y} value={y}>
+                              {y}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex gap-1">
+                        <select
+                          value={filterReportAreaLevel}
+                          onChange={(e) => setFilterReportAreaLevel(e.target.value)}
+                          className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">-- ทั้งหมด --</option>
+                          <option value="จังหวัด">จังหวัด</option>
+                          <option value="อำเภอ">อำเภอ</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={clearFilters}
+                          className="px-2 py-1.5 text-xs font-medium border border-gray-300 text-gray-700 bg-white hover:bg-gray-100 rounded-md"
+                        >
+                          ล้าง
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {viewRows.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-gray-500">
+                  <div className="flex-1 p-4 text-center text-sm text-gray-500 flex items-center justify-center">
                     ไม่พบข้อมูลในตารางนี้
                   </div>
                 ) : (
@@ -354,7 +575,7 @@ export default function DbManagePage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
-                      {viewRows.map((row, rowIndex) => (
+                      {displayedRows.map((row, rowIndex) => (
                         <tr key={rowIndex}>
                           {viewColumns.map((col) => (
                             <td

@@ -70,14 +70,12 @@ export async function GET(request: NextRequest) {
                     typeof item.target_result === 'string' ? parseFloat(item.target_result) || 0 : 0,
       divide_number: typeof item.divide_number === 'number' ? item.divide_number : 
                     typeof item.divide_number === 'string' ? parseFloat(item.divide_number) || 100 : 100,
-      sum_result: String(item.sum_result ?? ''),
       excellence: String(item.excellence ?? ''),
       area_level: String(item.area_level ?? ''),
       ssj_department: String(item.ssj_department ?? ''),
       ssj_pm: String(item.ssj_pm ?? ''),
       moph_department: String(item.moph_department ?? ''),
       kpi_type: String(item.kpi_type ?? ''),
-      grade: String(item.grade ?? ''),
       template_url: String(item.template_url ?? ''),
     }));
     

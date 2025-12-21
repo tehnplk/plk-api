@@ -64,7 +64,6 @@ export default function KPIDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [editableData, setEditableData] = useState<Record<string, Record<string, string>>>({});
   const [isEditing, setIsEditing] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
   const [userDepartment, setUserDepartment] = useState<string>('');
 
@@ -100,7 +99,6 @@ export default function KPIDetailModal({
   // admin: can edit all KPIs
   // editor: can edit only KPIs in their department
   const canEdit = userRole === 'admin' || (userRole === 'editor' && kpiDetail?.department === userDepartment);
-  const canSync = userRole === 'admin' || userRole === 'editor' || userRole === 'viewer';
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -157,7 +155,6 @@ export default function KPIDetailModal({
           divideNumber: kpiMetadata?.divide_number || sourceData.divide_number || null,
           divisionNumber: kpiMetadata?.divide_number || sourceData.divide_number || null,
           lastUpdated: new Date().toISOString(),
-          grade: kpiMetadata?.grade || '',
           template_url: kpiMetadata?.template_url || '',
           excellence: kpiMetadata?.excellence || '',
           ssj_pm: kpiMetadata?.ssj_pm || '',
@@ -477,48 +474,7 @@ export default function KPIDetailModal({
     }
   };
 
-  const handleSyncToSheet = async () => {
-    if (!kpiDetail) return;
 
-    try {
-      setSyncing(true);
-
-      const res = await fetch('/api/kpi/report/sync-sheet', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          moneyYear,
-          kpiId,
-          kpiName: kpiDetail.name,
-        }),
-      });
-
-      let data: any = null;
-      try {
-        data = await res.json();
-      } catch {
-        data = null;
-      }
-
-      if (!res.ok || (data && data.success === false)) {
-        console.error('Failed to sync kpi_report to Google Sheets data sheet', {
-          status: res.status,
-          body: data,
-        });
-        toast.error('Sync ข้อมูลขึ้น Google Sheet (ชีท data) ไม่สำเร็จ');
-        return;
-      }
-
-      toast.success('Sync ข้อมูลขึ้น Google Sheet (ชีท data) สำเร็จ');
-    } catch (err) {
-      console.error('Error syncing kpi_report to Google Sheets data sheet:', err);
-      toast.error('เกิดข้อผิดพลาดระหว่าง Sync ข้อมูลขึ้น Google Sheet');
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   // Save changes
   const handleSave = async () => {
@@ -634,54 +590,31 @@ export default function KPIDetailModal({
       }
 
       if (kpiDetail?.id) {
-        try {
-          // 1) Update KPI master table (kpis)
-          const dbRes = await fetch('/api/kpi/database', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              id: kpiDetail.id,
-              sum_result: summaryRate,
-            }),
-          });
+        // Calculate grade based on summary status
+        let calculatedGrade = 'รอประเมิน';
+        if (summaryStatus === 'pass') {
+          calculatedGrade = 'ผ่าน';
+        } else if (summaryStatus === 'fail') {
+          calculatedGrade = 'ไม่ผ่าน';
+        }
 
-          if (!dbRes.ok) {
-            console.error('Failed to update KPI master data before syncing to Google Sheets');
-            toast.error('บันทึกฐานข้อมูลรายพื้นที่สำเร็จ แต่บันทึกค่ารวมในตาราง KPI ไม่สำเร็จ');
-            return;
-          }
+        // Update KPI master table (kpis) with the calculated summary and grade
+        const dbRes = await fetch('/api/kpi/database', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: kpiDetail.id,
+            sum_result: summaryRate,
+            grade: calculatedGrade,
+          }),
+        });
 
-          // 2) Sync KPI summary to Google Sheets
-          const sheetRes = await fetch('/api/kpi/sheet', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              id: kpiDetail.id,
-              sum_result: summaryRate,
-              summary_status: summaryStatus,
-            }),
-          });
-
-          if (!sheetRes.ok) {
-            let sheetJson: any = null;
-            try {
-              sheetJson = await sheetRes.json();
-            } catch (e) {
-              sheetJson = null;
-            }
-            console.error('Failed to sync KPI summary to Google Sheets', {
-              status: sheetRes.status,
-              body: sheetJson,
-            });
-            toast.warning('บันทึกฐานข้อมูลสำเร็จ แต่ sync ข้อมูลไป Google Sheets ไม่สำเร็จ');
-          }
-        } catch (sheetError) {
-          console.error('Error syncing KPI summary to Google Sheets:', sheetError);
-          toast.warning('บันทึกฐานข้อมูลสำเร็จ แต่ไม่สามารถเชื่อมต่อ Google Sheets ได้');
+        if (!dbRes.ok) {
+          console.error('Failed to update KPI master data');
+          toast.error('บันทึกฐานข้อมูลรายพื้นที่สำเร็จ แต่บันทึกค่ารวมในตาราง KPI ไม่สำเร็จ');
+          return;
         }
       }
       setIsEditing(false);
@@ -747,17 +680,7 @@ export default function KPIDetailModal({
                         แก้ไขข้อมูล
                       </button>
                     )}
-                    {canSync && (
-                      <button
-                        type="button"
-                        className="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 flex items-center gap-1"
-                        onClick={handleSyncToSheet}
-                        disabled={syncing}
-                      >
-                        <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-                        {syncing ? 'Syncing...' : 'Sync Sheet'}
-                      </button>
-                    )}
+
                   </>
                 ) : (
                   <>

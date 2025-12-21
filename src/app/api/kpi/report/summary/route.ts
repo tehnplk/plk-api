@@ -6,6 +6,7 @@ import { EXCELLENCE_MAP } from '@/constants/excellence';
 
 // GET /api/kpi/report/summary?moneyYear=2569
 // สรุปข้อมูลรายอำเภอจากตาราง kpi_report โดย join กับ kpis เพื่อประเมินสถานะตาม condition/target
+// คำนวณ rate รวมต่อ KPI (group by kpi_id) แล้วประเมินสถานะ
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // ดึง KPI ทั้งหมดระดับอำเภอ (ใช้เป็นจำนวนตัวชี้วัดต่ออำเภอ)
+    // ดึง KPI ทั้งหมดระดับอำเภอ
     const allDistrictKpis = await prisma.kpis.findMany({
       where: {
         area_level: 'อำเภอ',
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
         id: true,
         condition: true,
         target_result: true,
+        divide_number: true,
         excellence: true,
       },
     });
@@ -43,36 +45,79 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         districtData: [],
         districtComparisonData: [],
+        districtExcellenceData: [],
       });
     }
 
-    const kpiMetaMap = new Map<string, { condition: string; target_result: number; excellence: string | null }>();
+    const kpiMetaMap = new Map<string, { 
+      condition: string; 
+      target_result: number; 
+      divide_number: number;
+      excellence: string | null 
+    }>();
     const kpiIds = allDistrictKpis.map((k) => k.id);
     allDistrictKpis.forEach((kpi) => {
       kpiMetaMap.set(kpi.id, {
         condition: kpi.condition,
         target_result: kpi.target_result,
+        divide_number: kpi.divide_number || 1,
         excellence: (kpi as any).excellence ?? null,
       });
     });
 
-    // ดึงรายงานทั้งหมดของปีงบประมาณนั้นสำหรับ KPI ระดับอำเภอในเขต DISTRICTS
-    const reports = await prisma.kpiReport.findMany({
+    // Group by kpi_id และ area_name เพื่อคำนวณ rate รวมต่อ KPI ต่ออำเภอ
+    const reportSums = await prisma.kpiReport.groupBy({
+      by: ['kpi_id', 'area_name'],
       where: {
         money_year: moneyYear,
         area_name: { in: DISTRICTS },
         kpi_id: { in: kpiIds },
       },
+      _sum: {
+        result_oct: true,
+        result_nov: true,
+        result_dec: true,
+        result_jan: true,
+        result_feb: true,
+        result_mar: true,
+        result_apr: true,
+        result_may: true,
+        result_jun: true,
+        result_jul: true,
+        result_aug: true,
+        result_sep: true,
+        kpi_target: true,
+      },
     });
 
-    type ReportKey = string;
-    const reportMap = new Map<ReportKey, typeof reports[number]>();
-    for (const r of reports) {
-      const key: ReportKey = `${r.area_name}::${r.kpi_id}`;
-      reportMap.set(key, r);
+    // สร้าง map สำหรับ lookup rate รวมต่อ KPI ต่ออำเภอ
+    type ReportSum = {
+      grandTotal: number;
+      totalTarget: number;
+      rate: number | null;
+    };
+    const reportSumMap = new Map<string, ReportSum>();
+    
+    for (const report of reportSums) {
+      const sum = report._sum;
+      const grandTotal = (sum.result_oct || 0) + (sum.result_nov || 0) + (sum.result_dec || 0) +
+                        (sum.result_jan || 0) + (sum.result_feb || 0) + (sum.result_mar || 0) +
+                        (sum.result_apr || 0) + (sum.result_may || 0) + (sum.result_jun || 0) +
+                        (sum.result_jul || 0) + (sum.result_aug || 0) + (sum.result_sep || 0);
+      const totalTarget = sum.kpi_target || 0;
+      
+      // คำนวณ rate เหมือน modal: (grandTotal / totalTarget) * divideNumber
+      const meta = kpiMetaMap.get(report.kpi_id);
+      const divideNumber = meta?.divide_number || 1;
+      const rate = totalTarget > 0 
+        ? Math.round((grandTotal / totalTarget) * divideNumber * 100) / 100
+        : null;
+      
+      const key = `${report.area_name}::${report.kpi_id}`;
+      reportSumMap.set(key, { grandTotal, totalTarget, rate });
     }
 
-    // สรุปตามอำเภอ (นับจากจำนวน KPI ระดับอำเภอทั้งหมด)
+    // สรุปตามอำเภอ
     type DistrictAgg = {
       name: string;
       pass: number;
@@ -143,33 +188,26 @@ export async function GET(request: NextRequest) {
         }
 
         const reportKey = `${areaName}::${kpi.id}`;
-        const report = reportMap.get(reportKey);
+        const reportSum = reportSumMap.get(reportKey);
 
         let status: 'pass' | 'fail' | 'pending' = 'pending';
 
-        if (!report) {
-          // ยังไม่มีรายงานเลย สำหรับ KPI นี้ในอำเภอนี้ => รอประเมิน
+        if (!reportSum || reportSum.totalTarget <= 0) {
+          // ยังไม่มีรายงานหรือยังไม่กำหนดเป้า => รอประเมิน
           status = 'pending';
         } else {
           const { condition, target_result } = meta;
           const cleanCondition = (condition ?? '').toString().trim();
 
-          // ใช้ rate เป็น actual และดูเป้ารายพื้นที่ (kpi_target)
-          const actual =
-            report.rate === null || report.rate === undefined
-              ? null
-              : Number(report.rate);
-          const areaTarget = report.kpi_target;
+          // ใช้ rate ที่คำนวณจาก group by (grandTotal/totalTarget * divideNumber)
+          const actual = reportSum.rate;
 
           if (
             !cleanCondition ||
             target_result === null ||
-            target_result === undefined ||
-            areaTarget === null ||
-            areaTarget === undefined ||
-            areaTarget <= 0
+            target_result === undefined
           ) {
-            // ไม่มีเงื่อนไข/เกณฑ์ หรือยังไม่กำหนดเป้ารายพื้นที่ => รอประเมิน
+            // ไม่มีเงื่อนไข/เกณฑ์ => รอประเมิน
             status = 'pending';
           } else {
             status = getStatusFromCondition(

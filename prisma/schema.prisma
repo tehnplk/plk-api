@@ -13,14 +13,12 @@ model Kpis {
   condition           String
   target_result       Float
   divide_number       Float
-  sum_result          String?
   excellence          String
   area_level          String
   ssj_department      String
   ssj_pm              String?
   moph_department     String?
   kpi_type            String
-  grade               String?
   template_url        String?
   last_synced_at      DateTime @default(now())
   created_at          DateTime @default(now())
@@ -34,6 +32,7 @@ model Kpis {
 model KpiReport {
   money_year Int
   area_name  String
+  area_level String?
   kpi_id     String
   kpi_name   String
   kpi_target Float?

@@ -27,11 +27,9 @@ export default function HomeNavbar({
   moneyYear, 
   session, 
   displayName, 
-  onRefresh, 
-  showRefreshButton = false, 
+  onRefresh,
+  showRefreshButton = false,
   isRefreshing = false,
-  onSync,
-  isSyncing = false,
   selectedDistrict,
   onDistrictChange,
   districtOptions = [],
@@ -140,18 +138,7 @@ export default function HomeNavbar({
                   <FileText size={16} /> รายการตัวชี้วัด
                 </button>
 
-                {/* Sync Button */}
-                {onSync && (
-                  <button 
-                    onClick={onSync}
-                    disabled={isSyncing}
-                    className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="ซิงค์ข้อมูลจาก Google Sheets"
-                  >
-                    <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-                    {isSyncing ? 'กำลังซิงค์...' : 'ซิงค์ข้อมูล'}
-                  </button>
-                )}
+
               </>
             ) : (
               <>
@@ -273,21 +260,7 @@ export default function HomeNavbar({
               <FileText size={16} /> รายการตัวชี้วัด
             </button>
 
-            {/* Sync Button - Mobile */}
-            {onSync && session && (
-              <button 
-                onClick={() => {
-                  onSync();
-                  setIsMobileMenuOpen(false);
-                }}
-                disabled={isSyncing}
-                className="w-full bg-orange-500 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-orange-600 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed justify-center"
-                title="ซิงค์ข้อมูลจาก Google Sheets"
-              >
-                <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-                {isSyncing ? 'กำลังซิงค์...' : 'ซิงค์ข้อมูล'}
-              </button>
-            )}
+
           </div>
 
           {/* User Actions - Mobile */}

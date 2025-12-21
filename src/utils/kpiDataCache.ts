@@ -17,7 +17,6 @@ export interface KpiItem {
   ssj_pm: string;
   moph_department: string;
   kpiType?: string;
-  grade?: string;
   template_url?: string;
   last_synced_at?: string;
 }
@@ -69,14 +68,12 @@ export function transformKpiData(rawData: any[]): KpiItem[] {
     department: String(item.ssj_department ?? ''),
     target: item.target_result ? Number(item.target_result) : undefined,
     divideNumber: item.divide_number ? Number(item.divide_number) : undefined,
-    result: item.sum_result != null ? String(item.sum_result) : null,
     status: 'pending' as KPIStatus,
     condition: String(item.condition ?? ''),
     kpiType: item.kpi_type,
     excellence: String(item.excellence ?? ''),
     ssj_pm: String(item.ssj_pm ?? ''),
     moph_department: String(item.moph_department ?? ''),
-    grade: item.grade,
     template_url: item.template_url,
     last_synced_at: item.last_synced_at,
   }));

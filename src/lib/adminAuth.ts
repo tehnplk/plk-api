@@ -1,9 +1,10 @@
 import { cache } from 'react';
 import { auth } from '@/authConfig';
 import { prisma } from '@/lib/prisma';
+import { Session } from 'next-auth';
 
 type AccountUserAuth = {
-  role: string;
+  role: string | null;
   active: boolean;
   full_name_th: string | null;
   full_name_en: string | null;
@@ -11,7 +12,7 @@ type AccountUserAuth = {
 };
 
 type AdminAuthContext = {
-  session: Awaited<ReturnType<typeof auth>>;
+  session: Session | null;
   providerId: string;
   displayNameFromProfile: string;
   user: AccountUserAuth | null;

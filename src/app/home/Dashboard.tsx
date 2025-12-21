@@ -178,57 +178,50 @@ export default function Dashboard({
   const stats = useMemo(() => {
     const isAllDistricts = selectedDistrictScope === "ALL";
 
-    // สรุปตัวเลขตามข้อมูลจริงจากฐานข้อมูล kpis (ภาพรวมจังหวัด)
-    let total = kpiData.length;
-
+    // สรุปตัวเลขตามข้อมูลจริงจากฐานข้อมูล
+    // total นับจาก kpis (จำนวนตัวชี้วัดทั้งหมด)
+    // pass/fail/pending คำนวณจาก kpi_report
+    let total = kpiData.length; // นับจาก kpis เสมอ
     let passCount = 0;
     let failCount = 0;
     let pendingCount = 0;
 
-    kpiData.forEach((item: any) => {
-      const condition = (item.condition ?? "").toString().trim();
+    if (isAllDistricts) {
+      // ภาพรวมจังหวัด: คำนวณจาก kpiData โดยตรง (ข้อมูลรวมจาก /api/kpi/database)
+      // เพื่อให้ตรงกับ datatable ที่แสดงอยู่
+      kpiData.forEach((kpi: any) => {
+        const sumResult = kpi.sum_result;
+        const condition = kpi.condition;
+        const targetResult = kpi.target_result;
 
-      // แปลง target_result เป็นตัวเลข ถ้าไม่มีให้ถือว่ายังประเมินไม่ได้
-      const targetRaw = item.target_result;
-      const target =
-        typeof targetRaw === "number"
-          ? targetRaw
-          : targetRaw
-          ? Number(targetRaw)
-          : NaN;
-
-      // แปลงผลลัพธ์ sum_result เป็นตัวเลข หรือให้เป็น null ถ้าไม่มี
-      const actualRaw = item.sum_result;
-      const actual =
-        actualRaw === null || actualRaw === undefined || actualRaw === ""
-          ? null
-          : Number(actualRaw);
-
-      // ถ้าไม่มีเงื่อนไขหรือ target ไม่ใช่ตัวเลข ให้ถือว่ายังรอประเมิน
-      if (!condition || Number.isNaN(target)) {
-        pendingCount += 1;
-        return;
-      }
-
-      const status = getStatusFromCondition(condition, target, actual);
-
-      if (status === "pass") passCount += 1;
-      else if (status === "fail") failCount += 1;
-      else pendingCount += 1;
-    });
-
-    // ถ้ามีการเลือกอำเภอเฉพาะ ให้ใช้สรุปจาก districtComparisonData ของอำเภอนั้น
-    if (!isAllDistricts && districtComparisonData && districtComparisonData.length > 0) {
+        if (sumResult === null || sumResult === undefined || sumResult === '' || sumResult === '-') {
+          pendingCount++;
+        } else {
+          const status = getStatusFromCondition(condition, targetResult, parseFloat(sumResult));
+          if (status === 'pass') {
+            passCount++;
+          } else if (status === 'fail') {
+            failCount++;
+          } else {
+            pendingCount++;
+          }
+        }
+      });
+    } else if (districtComparisonData && districtComparisonData.length > 0) {
+      // เลือกอำเภอเฉพาะ: ใช้ข้อมูลจาก districtComparisonData
       const selectedDistrictStats = districtComparisonData.find(
         (d) => d.name === selectedDistrictScope
       );
-
       if (selectedDistrictStats) {
-        total = selectedDistrictStats.total;
         passCount = selectedDistrictStats.pass;
         failCount = selectedDistrictStats.fail;
         pendingCount = selectedDistrictStats.pending;
+      } else {
+        pendingCount = total;
       }
+    } else {
+      // Fallback: ยังไม่มีข้อมูล kpi_report
+      pendingCount = total;
     }
 
     const denom = Math.max(total, 1);
@@ -245,7 +238,53 @@ export default function Dashboard({
       percent: string | number;
     }[];
 
-    if (!isAllDistricts && districtExcellenceData && districtExcellenceData.length > 0) {
+    if (isAllDistricts) {
+      // ภาพรวมจังหวัด: คำนวณจาก kpiData โดยอ้างอิง kpis.excellence
+      // เพื่อให้ตรงกับ datatable ที่แสดง
+      excellenceStats = Object.entries(EXCELLENCE_MAP).map(
+        ([code, label]) => {
+          const items = kpiData.filter(
+            (item: any) => String(item.excellence ?? "") === code
+          );
+          
+          let exPass = 0;
+          let exFail = 0;
+          let exPending = 0;
+          
+          items.forEach((kpi: any) => {
+            const sumResult = kpi.sum_result;
+            const condition = kpi.condition;
+            const targetResult = kpi.target_result;
+            
+            if (sumResult === null || sumResult === undefined || sumResult === '' || sumResult === '-') {
+              exPending++;
+            } else {
+              const status = getStatusFromCondition(condition, targetResult, parseFloat(sumResult));
+              if (status === 'pass') {
+                exPass++;
+              } else if (status === 'fail') {
+                exFail++;
+              } else {
+                exPending++;
+              }
+            }
+          });
+          
+          const exTotal = items.length;
+          const exDenom = Math.max(exTotal, 1);
+          const exPercent = exTotal === 0 ? "0.0" : ((exPass / exDenom) * 100).toFixed(1);
+          
+          return {
+            title: label,
+            total: exTotal,
+            pass: exPass,
+            fail: exFail,
+            pending: exPending,
+            percent: exPercent,
+          };
+        }
+      );
+    } else if (districtExcellenceData && districtExcellenceData.length > 0) {
       // กรณีเลือกอำเภอเฉพาะ ใช้ข้อมูลจาก districtExcellenceData ของอำเภอนั้น
       const districtEx = districtExcellenceData.find(
         (d) => d.name === selectedDistrictScope
@@ -256,55 +295,19 @@ export default function Dashboard({
         excellenceStats = [];
       }
     } else {
-      // ภาพรวมจังหวัด: สรุปจาก kpiData เดิม
+      // Fallback: ใช้ข้อมูลจาก kpiData แบบไม่มีสถานะ
       excellenceStats = Object.entries(EXCELLENCE_MAP).map(
         ([code, label]) => {
           const items = kpiData.filter(
             (item: any) => String(item.excellence ?? "") === code
           );
-
-          const totalEx = items.length;
-          let passEx = 0;
-          let failEx = 0;
-          let pendingEx = 0;
-
-          items.forEach((item: any) => {
-            const condition = (item.condition ?? "").toString().trim();
-            const targetRaw = item.target_result;
-            const target =
-              typeof targetRaw === "number"
-                ? targetRaw
-                : targetRaw
-                ? Number(targetRaw)
-                : NaN;
-            const actualRaw = item.sum_result;
-            const actual =
-              actualRaw === null || actualRaw === undefined || actualRaw === ""
-                ? null
-                : Number(actualRaw);
-
-            if (!condition || Number.isNaN(target)) {
-              pendingEx += 1;
-              return;
-            }
-
-            const status = getStatusFromCondition(condition, target, actual);
-            if (status === "pass") passEx += 1;
-            else if (status === "fail") failEx += 1;
-            else pendingEx += 1;
-          });
-
-          const denom = Math.max(totalEx, 1);
-          const percent =
-            totalEx === 0 ? "0.0" : ((passEx / denom) * 100).toFixed(1);
-
           return {
             title: label,
-            total: totalEx,
-            pass: passEx,
-            fail: failEx,
-            pending: pendingEx,
-            percent,
+            total: items.length,
+            pass: 0,
+            fail: 0,
+            pending: items.length,
+            percent: "0.0",
           };
         }
       );

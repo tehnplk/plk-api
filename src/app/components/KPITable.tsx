@@ -60,6 +60,11 @@ const getEvaluatedStatus = (kpi: KPIItem): KPIStatus => {
     return 'pending';
   }
 
+  // ถ้าไม่มี result ให้เป็น pending
+  if (actual === null) {
+    return 'pending';
+  }
+
   return getStatusFromCondition(condition, target, actual) as KPIStatus;
 };
 
@@ -73,6 +78,7 @@ export interface KPIItem {
   result: string | null;
   status: KPIStatus;
   target?: number;
+  sum_kpi_target?: number;
   divideNumber?: number;
   lastUpdated?: string;
   condition?: string;
@@ -117,6 +123,7 @@ const KPITable: React.FC<KPITableProps> = ({
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<KPIStatus | 'ทั้งหมด'>('ทั้งหมด');
   const [selectedKpiType, setSelectedKpiType] = useState<string>('ทั้งหมด');
+  const [selectedAreaLevel, setSelectedAreaLevel] = useState<'ทั้งหมด' | 'จังหวัด' | 'อำเภอ'>('ทั้งหมด');
   const [showMophOnly, setShowMophOnly] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedKpiId, setSelectedKpiId] = useState<string | null>(null);
@@ -132,6 +139,7 @@ const KPITable: React.FC<KPITableProps> = ({
     setSelectedDepartment('ทั้งหมด');
     setSelectedStatus('ทั้งหมด');
     setSelectedKpiType('ทั้งหมด');
+    setSelectedAreaLevel('ทั้งหมด');
     setShowMophOnly(false);
     
     // Use requestAnimationFrame to ensure scroll happens after DOM updates
@@ -273,13 +281,14 @@ const KPITable: React.FC<KPITableProps> = ({
             ...raw,
             result: raw.sum_result,
             target: raw.target_result,
+            sum_kpi_target: raw.sum_kpi_target,
             condition: raw.condition
           }) : 'pending',
           target: typeof raw.target_result === 'number' ? raw.target_result : undefined,
+          sum_kpi_target: typeof raw.sum_kpi_target === 'number' ? raw.sum_kpi_target : undefined,
           condition: raw.condition,
           kpiType: raw.kpi_type,
           divideNumber,
-          grade: raw.grade,
           template_url: raw.template_url,
           ssj_pm: raw.ssj_pm,
           moph_department: raw.moph_department,
@@ -423,8 +432,13 @@ const KPITable: React.FC<KPITableProps> = ({
           .includes(selectedKpiType));
     const matchDepartment =
       selectedDepartment === 'ทั้งหมด' || item.department === selectedDepartment;
+
+    const matchAreaLevel =
+      selectedAreaLevel === 'ทั้งหมด' ||
+      (selectedAreaLevel === 'จังหวัด' && item.level === 'province') ||
+      (selectedAreaLevel === 'อำเภอ' && item.level === 'district');
     
-    const matches = matchText && matchStatus && matchKpiType && matchDepartment;
+    const matches = matchText && matchStatus && matchKpiType && matchDepartment && matchAreaLevel;
     
     // Debug: Log first few items that don't match filters
     if (sortedData.indexOf(item) < 3 && !matches) {
@@ -433,6 +447,7 @@ const KPITable: React.FC<KPITableProps> = ({
         matchStatus,
         matchKpiType,
         matchDepartment,
+        matchAreaLevel,
         filters: { searchTerm, selectedStatus, selectedKpiType, selectedDepartment },
         item: { name: item.name, department: item.department, kpiType: item.kpiType, status: getEvaluatedStatus(item) }
       });
@@ -544,6 +559,15 @@ const KPITable: React.FC<KPITableProps> = ({
                 {getKpiTypeLabel(type)}
               </option>
             ))}
+          </select>
+          <select
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={selectedAreaLevel}
+            onChange={(e) => setSelectedAreaLevel(e.target.value as 'ทั้งหมด' | 'จังหวัด' | 'อำเภอ')}
+          >
+            <option value="ทั้งหมด">ระดับพื้นที่ทั้งหมด</option>
+            <option value="จังหวัด">จังหวัด</option>
+            <option value="อำเภอ">อำเภอ</option>
           </select>
           <select
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -726,6 +750,10 @@ const KPITable: React.FC<KPITableProps> = ({
                     {kpi.result && kpi.result !== '0' ? (
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-800 border border-blue-200">
                         {kpi.result}
+                      </span>
+                    ) : kpi.result === '0' ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-800 border border-red-200">
+                        0.00
                       </span>
                     ) : (
                       <span className="text-gray-400">-</span>

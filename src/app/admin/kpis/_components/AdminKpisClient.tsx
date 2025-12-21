@@ -17,7 +17,6 @@ type Kpi = {
   condition: string;
   target_result: number;
   divide_number: number;
-  sum_result: string | null;
   excellence: string;
   area_level: string;
   ssj_department: string;

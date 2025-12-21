@@ -89,13 +89,13 @@ export default function KpiTable({ kpis, onEdit, onDelete }: KpiTableProps) {
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button
                   onClick={() => onEdit(kpi)}
-                  className="text-blue-600 hover:text-blue-900 mr-3"
+                  className="text-blue-600 hover:text-blue-900 mr-3 cursor-pointer"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => onDelete(kpi.id)}
-                  className="text-red-600 hover:text-red-900"
+                  className="text-red-600 hover:text-red-900 cursor-pointer"
                 >
                   Delete
                 </button>

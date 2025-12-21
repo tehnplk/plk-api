@@ -119,7 +119,7 @@ export default function KpiFormFields({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ค่าเป้าหมาย *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ค่าเป้าหมาย (อัตรา) *</label>
             <input
               type="number"
               step="0.01"
@@ -149,7 +149,7 @@ export default function KpiFormFields({
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ยุทธศาสตร์ *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Excellence *</label>
             <input
               type="text"
               name="excellence"

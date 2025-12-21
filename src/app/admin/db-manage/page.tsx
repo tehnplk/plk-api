@@ -406,7 +406,7 @@ export default function DbManagePage() {
                         <button
                           type="button"
                           onClick={() => handleView(table)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors cursor-pointer"
                         >
                           <Eye size={14} />
                           View

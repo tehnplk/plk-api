@@ -161,7 +161,7 @@ export default function ProfilePage() {
         <div className="container mx-auto px-4 h-16 flex items-center gap-4">
           <Link
             href="/home"
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
           >
             <ArrowLeft size={24} className="text-blue-600" />
           </Link>
@@ -177,7 +177,7 @@ export default function ProfilePage() {
           {/* Dashboard Button */}
           <Link
             href="/home"
-            className="ml-auto px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            className="ml-auto px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 cursor-pointer"
           >
             <LayoutDashboard size={18} />
             Dashboard

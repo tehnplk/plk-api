@@ -133,7 +133,7 @@ export default function HomeNavbar({
               <>
                 <button
                   onClick={scrollToKpiTable}
-                  className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-all shadow-sm text-sm font-medium"
+                  className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-all shadow-sm text-sm font-medium cursor-pointer"
                 >
                   <FileText size={16} /> รายการตัวชี้วัด
                 </button>
@@ -144,7 +144,7 @@ export default function HomeNavbar({
               <>
                 <button
                   onClick={scrollToKpiTable}
-                  className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-all shadow-sm text-sm font-medium"
+                  className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-all shadow-sm text-sm font-medium cursor-pointer"
                 >
                   <FileText size={16} /> รายการตัวชี้วัด
                 </button>
@@ -155,7 +155,7 @@ export default function HomeNavbar({
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden flex items-center gap-2 bg-sky-100 hover:bg-sky-200 px-3 py-2 rounded-lg text-sm font-medium text-sky-700 transition-colors"
+            className="md:hidden flex items-center gap-2 bg-sky-100 hover:bg-sky-200 px-3 py-2 rounded-lg text-sm font-medium text-sky-700 transition-colors cursor-pointer"
           >
             {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -255,7 +255,7 @@ export default function HomeNavbar({
                 scrollToKpiTable();
                 setIsMobileMenuOpen(false);
               }}
-              className="w-full flex items-center gap-2 bg-green-500 text-white px-4 py-3 rounded-lg hover:bg-green-600 transition-all shadow-sm text-sm font-medium justify-center"
+              className="w-full flex items-center gap-2 bg-green-500 text-white px-4 py-3 rounded-lg hover:bg-green-600 transition-all shadow-sm text-sm font-medium justify-center cursor-pointer"
             >
               <FileText size={16} /> รายการตัวชี้วัด
             </button>
@@ -304,7 +304,7 @@ export default function HomeNavbar({
               <Link
                 href="/login"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full flex items-center gap-2 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-medium justify-center"
+                className="w-full flex items-center gap-2 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-medium justify-center cursor-pointer"
               >
                 <LogIn size={16} /> เข้าสู่ระบบ
               </Link>

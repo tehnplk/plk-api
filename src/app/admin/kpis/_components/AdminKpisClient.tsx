@@ -135,7 +135,7 @@ export default function AdminKpisClient({ initialKpis }: Props) {
         <button
           type="button"
           onClick={handleOpenCreate}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           Add KPI
@@ -239,14 +239,14 @@ export default function AdminKpisClient({ initialKpis }: Props) {
                 type="button"
                 onClick={closeFormModal}
                 disabled={isPending}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isPending}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
               >
                 {formMode === 'create' ? 'Create' : 'Update'}
               </button>
@@ -270,8 +270,15 @@ function Modal({
   children: ReactNode;
 }) {
   return (
-    <div className="fixed inset-x-0 top-16 z-50 flex justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4">
+      {/* Backdrop with blur */}
+      <div 
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal content */}
+      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
             <div>
@@ -286,7 +293,7 @@ function Modal({
             </button>
           </div>
 
-          <div className="bg-white shadow rounded-lg p-6">{children}</div>
+          <div>{children}</div>
         </div>
       </div>
     </div>

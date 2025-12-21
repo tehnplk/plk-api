@@ -673,7 +673,7 @@ export default function KPIDetailModal({
                     {canEdit && (
                       <button
                         type="button"
-                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-1 cursor-pointer"
                         onClick={() => setIsEditing(true)}
                       >
                         <FileText size={14} />
@@ -686,7 +686,7 @@ export default function KPIDetailModal({
                   <>
                     <button
                       type="button"
-                      className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 flex items-center gap-1"
+                      className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 flex items-center gap-1 cursor-pointer"
                       onClick={handleSave}
                     >
                       <Save size={14} />
@@ -694,7 +694,7 @@ export default function KPIDetailModal({
                     </button>
                     <button
                       type="button"
-                      className="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 flex items-center gap-1"
+                      className="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 flex items-center gap-1 cursor-pointer"
                       onClick={handleCancel}
                     >
                       <X size={14} />
@@ -706,7 +706,7 @@ export default function KPIDetailModal({
             )}
             <button
               type="button"
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-500 cursor-pointer"
               onClick={onClose}
               aria-label="ปิด"
             >

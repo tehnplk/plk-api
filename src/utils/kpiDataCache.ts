@@ -32,8 +32,14 @@ export class KpiDataCache {
   }
 
   // Fetch data from database API
-  async fetchFromApi(): Promise<any[]> {
-    const response = await fetch('/api/kpi/database');
+  async fetchFromApi(areaName?: string): Promise<any[]> {
+    // Build URL with optional areaName filter
+    let url = '/api/kpi/database';
+    if (areaName && areaName.trim() !== '' && areaName !== 'ALL') {
+      url += `?areaName=${encodeURIComponent(areaName.trim())}`;
+    }
+    
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -42,10 +48,10 @@ export class KpiDataCache {
   }
 
   // Load data directly from database (no localStorage)
-  async loadData(forceRefresh: boolean = false): Promise<any[]> {
+  async loadData(forceRefresh: boolean = false, areaName?: string): Promise<any[]> {
     // Always fetch fresh data from database
     try {
-      const data = await this.fetchFromApi();
+      const data = await this.fetchFromApi(areaName);
       return data;
     } catch (error) {
       console.error('Failed to fetch from database:', error);

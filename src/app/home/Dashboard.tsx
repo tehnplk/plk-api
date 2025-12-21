@@ -77,7 +77,7 @@ export default function Dashboard({
   }[]>([]);
 
   const handleRefreshKpis = async () => {
-    await loadKpiData(true); // Force refresh
+    await loadKpiData(true, selectedDistrictScope); // Force refresh with district filter
     onRefresh(); // Notify parent
   };
 
@@ -117,14 +117,16 @@ export default function Dashboard({
     }
   };
 
-  const loadKpiData = async (forceRefresh: boolean = false) => {
+  const loadKpiData = async (forceRefresh: boolean = false, areaName?: string) => {
     try {
-      const data = await kpiDataCache.loadData(forceRefresh);
+      // ส่ง areaName ไปให้ API กรองตามอำเภอ (ถ้าไม่ใช่ ALL)
+      const effectiveAreaName = areaName === 'ALL' ? undefined : areaName;
+      const data = await kpiDataCache.loadData(forceRefresh, effectiveAreaName);
       setKpiData(data);
       setRefreshCounter((prev) => prev + 1);
 
       if (forceRefresh) {
-        console.log("KPI data refreshed from Google Sheets");
+        console.log("KPI data refreshed from database");
         toast.success("ข้อมูล KPI อัปเดตเรียบร้อย", {
           position: "top-right",
           autoClose: 3000,
@@ -170,14 +172,19 @@ export default function Dashboard({
 
   useEffect(() => {
     setMounted(true);
-    // Load KPI data from Google Sheets API
-    loadKpiData();
+    // Load KPI data from database API
+    loadKpiData(false, selectedDistrictScope);
     loadDistrictSummary(moneyYear);
   }, [moneyYear]);
 
-  const stats = useMemo(() => {
-    const isAllDistricts = selectedDistrictScope === "ALL";
+  // โหลดข้อมูลใหม่เมื่อเลือกอำเภอเปลี่ยน
+  useEffect(() => {
+    if (mounted) {
+      loadKpiData(false, selectedDistrictScope);
+    }
+  }, [selectedDistrictScope]);
 
+  const stats = useMemo(() => {
     // สรุปตัวเลขตามข้อมูลจริงจากฐานข้อมูล
     // total นับจาก kpis (จำนวนตัวชี้วัดทั้งหมด)
     // pass/fail/pending คำนวณจาก kpi_report
@@ -186,43 +193,27 @@ export default function Dashboard({
     let failCount = 0;
     let pendingCount = 0;
 
-    if (isAllDistricts) {
-      // ภาพรวมจังหวัด: คำนวณจาก kpiData โดยตรง (ข้อมูลรวมจาก /api/kpi/database)
-      // เพื่อให้ตรงกับ datatable ที่แสดงอยู่
-      kpiData.forEach((kpi: any) => {
-        const sumResult = kpi.sum_result;
-        const condition = kpi.condition;
-        const targetResult = kpi.target_result;
+    // คำนวณจาก kpiData โดยตรง (ข้อมูลจาก /api/kpi/database ที่กรองตาม areaName แล้ว)
+    // ทั้งกรณี "ภาพรวมจังหวัด" และ "เลือกอำเภอเฉพาะ" ใช้วิธีเดียวกัน
+    // เพราะ API กรอง kpi_report.area_name ตาม selectedDistrictScope แล้ว
+    kpiData.forEach((kpi: any) => {
+      const sumResult = kpi.sum_result;
+      const condition = kpi.condition;
+      const targetResult = kpi.target_result;
 
-        if (sumResult === null || sumResult === undefined || sumResult === '' || sumResult === '-') {
-          pendingCount++;
-        } else {
-          const status = getStatusFromCondition(condition, targetResult, parseFloat(sumResult));
-          if (status === 'pass') {
-            passCount++;
-          } else if (status === 'fail') {
-            failCount++;
-          } else {
-            pendingCount++;
-          }
-        }
-      });
-    } else if (districtComparisonData && districtComparisonData.length > 0) {
-      // เลือกอำเภอเฉพาะ: ใช้ข้อมูลจาก districtComparisonData
-      const selectedDistrictStats = districtComparisonData.find(
-        (d) => d.name === selectedDistrictScope
-      );
-      if (selectedDistrictStats) {
-        passCount = selectedDistrictStats.pass;
-        failCount = selectedDistrictStats.fail;
-        pendingCount = selectedDistrictStats.pending;
+      if (sumResult === null || sumResult === undefined || sumResult === '' || sumResult === '-') {
+        pendingCount++;
       } else {
-        pendingCount = total;
+        const status = getStatusFromCondition(condition, targetResult, parseFloat(sumResult));
+        if (status === 'pass') {
+          passCount++;
+        } else if (status === 'fail') {
+          failCount++;
+        } else {
+          pendingCount++;
+        }
       }
-    } else {
-      // Fallback: ยังไม่มีข้อมูล kpi_report
-      pendingCount = total;
-    }
+    });
 
     const denom = Math.max(total, 1);
     const percentPass =
@@ -238,80 +229,52 @@ export default function Dashboard({
       percent: string | number;
     }[];
 
-    if (isAllDistricts) {
-      // ภาพรวมจังหวัด: คำนวณจาก kpiData โดยอ้างอิง kpis.excellence
-      // เพื่อให้ตรงกับ datatable ที่แสดง
-      excellenceStats = Object.entries(EXCELLENCE_MAP).map(
-        ([code, label]) => {
-          const items = kpiData.filter(
-            (item: any) => String(item.excellence ?? "") === code
-          );
+    // คำนวณจาก kpiData โดยอ้างอิง kpis.excellence
+    // ทั้งกรณี "ภาพรวมจังหวัด" และ "เลือกอำเภอเฉพาะ" ใช้วิธีเดียวกัน
+    // เพราะ API กรอง kpi_report.area_name ตาม selectedDistrictScope แล้ว
+    excellenceStats = Object.entries(EXCELLENCE_MAP).map(
+      ([code, label]) => {
+        const items = kpiData.filter(
+          (item: any) => String(item.excellence ?? "") === code
+        );
+        
+        let exPass = 0;
+        let exFail = 0;
+        let exPending = 0;
+        
+        items.forEach((kpi: any) => {
+          const sumResult = kpi.sum_result;
+          const condition = kpi.condition;
+          const targetResult = kpi.target_result;
           
-          let exPass = 0;
-          let exFail = 0;
-          let exPending = 0;
-          
-          items.forEach((kpi: any) => {
-            const sumResult = kpi.sum_result;
-            const condition = kpi.condition;
-            const targetResult = kpi.target_result;
-            
-            if (sumResult === null || sumResult === undefined || sumResult === '' || sumResult === '-') {
-              exPending++;
+          if (sumResult === null || sumResult === undefined || sumResult === '' || sumResult === '-') {
+            exPending++;
+          } else {
+            const status = getStatusFromCondition(condition, targetResult, parseFloat(sumResult));
+            if (status === 'pass') {
+              exPass++;
+            } else if (status === 'fail') {
+              exFail++;
             } else {
-              const status = getStatusFromCondition(condition, targetResult, parseFloat(sumResult));
-              if (status === 'pass') {
-                exPass++;
-              } else if (status === 'fail') {
-                exFail++;
-              } else {
-                exPending++;
-              }
+              exPending++;
             }
-          });
-          
-          const exTotal = items.length;
-          const exDenom = Math.max(exTotal, 1);
-          const exPercent = exTotal === 0 ? "0.0" : ((exPass / exDenom) * 100).toFixed(1);
-          
-          return {
-            title: label,
-            total: exTotal,
-            pass: exPass,
-            fail: exFail,
-            pending: exPending,
-            percent: exPercent,
-          };
-        }
-      );
-    } else if (districtExcellenceData && districtExcellenceData.length > 0) {
-      // กรณีเลือกอำเภอเฉพาะ ใช้ข้อมูลจาก districtExcellenceData ของอำเภอนั้น
-      const districtEx = districtExcellenceData.find(
-        (d) => d.name === selectedDistrictScope
-      );
-      if (districtEx && districtEx.excellenceStats.length > 0) {
-        excellenceStats = districtEx.excellenceStats;
-      } else {
-        excellenceStats = [];
+          }
+        });
+        
+        const exTotal = items.length;
+        const exDenom = Math.max(exTotal, 1);
+        const exPercent = exTotal === 0 ? "0.0" : ((exPass / exDenom) * 100).toFixed(1);
+        
+        return {
+          title: label,
+          total: exTotal,
+          pass: exPass,
+          fail: exFail,
+          pending: exPending,
+          percent: exPercent,
+        };
       }
-    } else {
-      // Fallback: ใช้ข้อมูลจาก kpiData แบบไม่มีสถานะ
-      excellenceStats = Object.entries(EXCELLENCE_MAP).map(
-        ([code, label]) => {
-          const items = kpiData.filter(
-            (item: any) => String(item.excellence ?? "") === code
-          );
-          return {
-            title: label,
-            total: items.length,
-            pass: 0,
-            fail: 0,
-            pending: items.length,
-            percent: "0.0",
-          };
-        }
-      );
-    }
+    );
 
     return {
       total,
@@ -323,7 +286,7 @@ export default function Dashboard({
       districtComparisonData,
       excellenceStats,
     };
-  }, [kpiData, selectedDistrictScope, districtData, districtComparisonData]);
+  }, [kpiData, districtData, districtComparisonData]);
 
   if (!mounted) {
     return null;

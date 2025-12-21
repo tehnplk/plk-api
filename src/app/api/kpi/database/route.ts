@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const level = searchParams.get('level');
     const kpiType = searchParams.get('kpiType');
     const moneyYear = searchParams.get('moneyYear');
+    const areaName = searchParams.get('areaName'); // กรองตามอำเภอ (ถ้ามี)
 
     // Build where clause for kpis table
     let whereClause: any = {};
@@ -22,6 +23,12 @@ export async function GET(request: NextRequest) {
     
     if (kpiType && kpiType.trim() !== '') {
       whereClause.kpi_type = kpiType.trim();
+    }
+
+    // ถ้าเลือกอำเภอเฉพาะ ให้กรองเฉพาะ KPIs ที่มี area_level = "อำเภอ"
+    // (ไม่รวม KPIs ระดับจังหวัด)
+    if (areaName && areaName.trim() !== '' && areaName !== 'ALL') {
+      whereClause.area_level = 'อำเภอ';
     }
 
     // Fetch KPI master data from kpis table
@@ -40,11 +47,20 @@ export async function GET(request: NextRequest) {
 
     // Get sum of monthly results and targets from kpi_report for each KPI
     // This matches the modal's summary row calculation: (grandTotal / totalTarget) * divideNumber
+    
+    // Build where clause for kpi_report
+    const reportWhereClause: any = {
+      money_year: currentMoneyYear,
+    };
+    
+    // ถ้าระบุ areaName ให้กรองเฉพาะอำเภอนั้น
+    if (areaName && areaName.trim() !== '' && areaName !== 'ALL') {
+      reportWhereClause.area_name = areaName.trim();
+    }
+    
     const kpiReportSums = await prisma.kpiReport.groupBy({
       by: ['kpi_id'],
-      where: {
-        money_year: currentMoneyYear,
-      },
+      where: reportWhereClause,
       _sum: {
         result_oct: true,
         result_nov: true,
@@ -121,7 +137,8 @@ export async function GET(request: NextRequest) {
       filters: {
         department,
         level,
-        kpiType
+        kpiType,
+        areaName
       }
     });
 

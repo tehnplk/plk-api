@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Database, RefreshCw, Shield, Users, BarChart3 } from 'lucide-react';
+import { Database, Shield, Users, BarChart3 } from 'lucide-react';
 
 export default function AdminPortalPage() {
   const cards = [
@@ -29,15 +29,6 @@ export default function AdminPortalPage() {
       accent: 'text-emerald-700',
       bg: 'bg-emerald-50',
       border: 'border-emerald-200',
-    },
-    {
-      href: '/admin/sync',
-      title: 'Sync',
-      desc: 'เครื่องมือซิงค์ข้อมูลสำหรับผู้ดูแลระบบ',
-      icon: RefreshCw,
-      accent: 'text-orange-700',
-      bg: 'bg-orange-50',
-      border: 'border-orange-200',
     },
   ] as const;
 

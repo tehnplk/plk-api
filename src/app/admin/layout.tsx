@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
-import { auth } from '@/authConfig';
-import { prisma } from '@/lib/prisma';
+import { getAdminAuthContext } from '@/lib/adminAuth';
 import Link from 'next/link';
 import { ArrowLeft, Home, Shield } from 'lucide-react';
 
@@ -11,49 +10,12 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-  
+  // Get provider_id from session
+  const { session, providerId, displayNameFromProfile, user } = await getAdminAuthContext();
+
   if (!session?.user) {
     redirect('/login');
   }
-
-  // Get provider_id from session
-  const profile = (session.user as any).profile;
-  let providerId = session.user.name;
-  let displayName = session.user.name;
-  
-  if (profile) {
-    try {
-      const parsedProfile = typeof profile === 'string' ? JSON.parse(profile) : profile;
-      providerId = parsedProfile.provider_id || parsedProfile.sub || parsedProfile.id || session.user.name;
-
-      const thFullName = [parsedProfile.title_th, parsedProfile.name_th]
-        .filter(Boolean)
-        .join(' ')
-        .trim();
-      const enFullName = [parsedProfile.title_en, parsedProfile.name_eng]
-        .filter(Boolean)
-        .join(' ')
-        .trim();
-
-      displayName =
-        thFullName ||
-        enFullName ||
-        parsedProfile.full_name_th ||
-        parsedProfile.full_name ||
-        parsedProfile.name ||
-        parsedProfile.display_name ||
-        session.user.name;
-    } catch (e) {
-      console.log('Profile parse error, using username as providerId');
-    }
-  }
-
-  // Check user role in database
-  const user = await prisma.accountUser.findUnique({
-    where: { provider_id: providerId || '' },
-    select: { role: true, active: true, full_name_th: true, full_name_en: true, email: true }
-  });
 
   if (!user || !user.active) {
     redirect('/login');
@@ -64,7 +26,7 @@ export default async function AdminLayout({
   }
 
   const dbDisplayName = user.full_name_th || user.full_name_en || user.email || providerId;
-  const resolvedDisplayName = displayName && displayName !== providerId ? displayName : dbDisplayName;
+  const resolvedDisplayName = displayNameFromProfile && displayNameFromProfile !== providerId ? displayNameFromProfile : dbDisplayName;
   const avatarInitial = (resolvedDisplayName || 'A').trim().charAt(0).toUpperCase();
 
   return (

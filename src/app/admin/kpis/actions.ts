@@ -2,41 +2,11 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/authConfig';
-
-async function checkAdminRole() {
-  const session = await auth();
-  if (!session?.user) {
-    throw new Error('Unauthorized');
-  }
-
-  const profile = (session.user as any).profile;
-  let providerId = session.user.name;
-  
-  if (profile) {
-    try {
-      const parsedProfile = typeof profile === 'string' ? JSON.parse(profile) : profile;
-      providerId = parsedProfile.provider_id || parsedProfile.sub || parsedProfile.id || session.user.name;
-    } catch (e) {
-      console.log('Profile parse error');
-    }
-  }
-
-  const user = await prisma.accountUser.findUnique({
-    where: { provider_id: providerId || '' },
-    select: { role: true, active: true }
-  });
-
-  if (!user || !user.active || user.role !== 'admin') {
-    throw new Error('Access denied. Admin role required.');
-  }
-
-  return true;
-}
+import { requireAdminRole } from '@/lib/adminAuth';
 
 export async function getKpis() {
   try {
-    await checkAdminRole();
+    await requireAdminRole();
     const kpis = await prisma.kpis.findMany({
       orderBy: {
         id: 'asc'
@@ -52,7 +22,7 @@ export async function getKpis() {
 
 async function createKpi(formData: FormData) {
   try {
-    await checkAdminRole();
+    await requireAdminRole();
     const data = {
       id: formData.get('id') as string,
       name: formData.get('name') as string,
@@ -99,7 +69,7 @@ export async function createKpiMutation(formData: FormData) {
 
 async function updateKpi(id: string, formData: FormData) {
   try {
-    await checkAdminRole();
+    await requireAdminRole();
     const data = {
       name: formData.get('name') as string,
       evaluation_criteria: formData.get('evaluation_criteria') as string,
@@ -137,7 +107,7 @@ export async function updateKpiMutation(id: string, formData: FormData) {
 
 async function deleteKpi(id: string) {
   try {
-    await checkAdminRole();
+    await requireAdminRole();
     // Check if KPI exists
     const existingKpi = await prisma.kpis.findUnique({
       where: { id }

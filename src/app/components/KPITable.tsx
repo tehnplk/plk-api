@@ -83,7 +83,6 @@ export interface KPIItem {
   lastUpdated?: string;
   condition?: string;
   kpiType?: string;
-  grade?: string;
   template_url?: string;
   ssj_pm?: string;
   moph_department?: string;

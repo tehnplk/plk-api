@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { id, sum_result, grade } = await request.json();
+    const { id, sum_result } = await request.json();
 
     if (!id) {
       return NextResponse.json(

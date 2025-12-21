@@ -18,7 +18,6 @@ interface KPIDetail {
   divideNumber: number | null;
   divisionNumber: number | null;
   lastUpdated: string | null;
-  grade?: string;
   template_url?: string;
   excellence?: string;
   ssj_pm?: string;
@@ -590,15 +589,7 @@ export default function KPIDetailModal({
       }
 
       if (kpiDetail?.id) {
-        // Calculate grade based on summary status
-        let calculatedGrade = 'รอประเมิน';
-        if (summaryStatus === 'pass') {
-          calculatedGrade = 'ผ่าน';
-        } else if (summaryStatus === 'fail') {
-          calculatedGrade = 'ไม่ผ่าน';
-        }
-
-        // Update KPI master table (kpis) with the calculated summary and grade
+        // Update KPI master table (kpis) with the calculated summary
         const dbRes = await fetch('/api/kpi/database', {
           method: 'POST',
           headers: {
@@ -607,7 +598,6 @@ export default function KPIDetailModal({
           body: JSON.stringify({
             id: kpiDetail.id,
             sum_result: summaryRate,
-            grade: calculatedGrade,
           }),
         });
 

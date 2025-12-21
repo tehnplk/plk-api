@@ -74,6 +74,7 @@ export function transformKpiData(rawData: any[]): KpiItem[] {
     department: String(item.ssj_department ?? ''),
     target: item.target_result ? Number(item.target_result) : undefined,
     divideNumber: item.divide_number ? Number(item.divide_number) : undefined,
+    result: item.sum_result ?? null,
     status: 'pending' as KPIStatus,
     condition: String(item.condition ?? ''),
     kpiType: item.kpi_type,

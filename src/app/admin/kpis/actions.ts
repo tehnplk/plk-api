@@ -37,7 +37,6 @@ async function createKpi(formData: FormData) {
       ssj_pm: formData.get('ssj_pm') as string || null,
       moph_department: formData.get('moph_department') as string || null,
       kpi_type: formData.get('kpi_type') as string,
-      grade: formData.get('grade') as string || null,
       template_url: formData.get('template_url') as string || null,
     };
 
@@ -82,7 +81,6 @@ async function updateKpi(id: string, formData: FormData) {
       ssj_pm: formData.get('ssj_pm') as string || null,
       moph_department: formData.get('moph_department') as string || null,
       kpi_type: formData.get('kpi_type') as string,
-      grade: formData.get('grade') as string || null,
       template_url: formData.get('template_url') as string || null,
     };
 

@@ -23,7 +23,6 @@ type Kpi = {
   ssj_pm: string | null;
   moph_department: string | null;
   kpi_type: string;
-  grade: string | null;
   template_url: string | null;
 };
 

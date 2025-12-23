@@ -123,15 +123,25 @@ export default function AdminKpisClient({ initialKpis }: Props) {
 
     const res = await Swal.fire({
       title: 'Confirm delete',
-      text: `Delete KPI: ${kpi.id}?`,
+      html: `ต้องการลบ KPI: <strong>${kpi.id}</strong> หรือไม่?<br/><br/>พิมพ์รหัส <strong>${kpi.id}</strong> เพื่อยืนยัน`,
       icon: 'warning',
+      input: 'text',
+      inputPlaceholder: `พิมพ์ ${kpi.id}`,
       showCancelButton: true,
       confirmButtonText: 'Delete',
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#dc2626',
       cancelButtonColor: '#6b7280',
       showLoaderOnConfirm: true,
-      preConfirm: async () => {
+      preConfirm: async (value) => {
+        if (!value) {
+          Swal.showValidationMessage('กรุณาพิมพ์รหัสตัวชี้วัด');
+          return false;
+        }
+        if (value !== kpi.id) {
+          Swal.showValidationMessage('รหัสตัวชี้วัดไม่ตรง');
+          return false;
+        }
         const result = await deleteKpiMutation(kpi.id);
         if (!result.success) {
           Swal.showValidationMessage(result.error ?? 'Delete failed');
@@ -188,13 +198,13 @@ export default function AdminKpisClient({ initialKpis }: Props) {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area Level</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รหัส</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อตัวชี้วัด</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ระดับพื้นที่</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">กลุ่มงาน สสจ.</th>
               <th
-                aria-label="Actions"
+                aria-label="การทำงาน"
                 className="sticky right-0 z-10 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.25)]"
               />
             </tr>

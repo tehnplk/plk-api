@@ -10,7 +10,6 @@ interface DbTable {
   label: string;
   records: number;
   canClear: boolean;
-  canSync: boolean;
 }
 
 export default function DbManagePage() {
@@ -22,7 +21,6 @@ export default function DbManagePage() {
   const [viewColumns, setViewColumns] = useState<string[]>([]);
   const [viewLoading, setViewLoading] = useState(false);
   const [viewError, setViewError] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [filteredRows, setFilteredRows] = useState<any[]>([]);
   const [filterKpiId, setFilterKpiId] = useState('');
   const [filterKpiName, setFilterKpiName] = useState('');
@@ -187,69 +185,26 @@ export default function DbManagePage() {
 
     const result = await Swal.fire({
       title: 'ยืนยันการล้างข้อมูล',
-      text: `ต้องการล้างข้อมูลทั้งหมดในตาราง "${table.label}" หรือไม่?`,
+      html: `ต้องการล้างข้อมูลทั้งหมดในตาราง <strong>"${table.name}"</strong> หรือไม่?<br/><br/>พิมพ์ชื่อตาราง <strong>${table.name}</strong> เพื่อยืนยัน`,
       icon: 'warning',
+      input: 'text',
+      inputPlaceholder: `พิมพ์ ${table.name}`,
       showCancelButton: true,
       confirmButtonText: 'ยืนยัน',
       cancelButtonText: 'ยกเลิก',
       reverseButtons: true,
+      inputValidator: (value) => {
+        if (!value) {
+          return 'กรุณาพิมพ์ชื่อตาราง';
+        }
+        if (value !== table.name) {
+          return `ชื่อตารางไม่ตรง`;
+        }
+      },
     });
 
     if (result.isConfirmed) {
       void doClear();
-    }
-  };
-
-  const handleSync = async (table: DbTable) => {
-    // TODO: เชื่อมต่อ API sync ข้อมูลตาราง
-    if (!table.canSync || isSyncing) return;
-
-    // ตอนนี้รองรับ Sync เฉพาะตาราง kpis โดยเรียก /api/kpi/sync แบบเดียวกับปุ่มที่หน้า /home
-    if (table.name !== 'kpis') {
-      toast.info(`ฟังก์ชัน Sync ของตาราง ${table.name} ยังไม่ได้เชื่อมต่อ API`);
-      return;
-    }
-
-    const doSync = async () => {
-      try {
-        setIsSyncing(true);
-        setLoading(true);
-        const response = await fetch('/api/kpi/sync', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          toast.success(`Sync สำเร็จ! อัปเดต ${result.count} รายการ`);
-          await loadTables();
-        } else {
-          toast.error(result.message || 'Sync ล้มเหลว');
-        }
-      } catch (error) {
-        console.error('Sync error:', error);
-        toast.error('Sync ล้มเหลว กรุณาลองใหม่');
-      } finally {
-        setLoading(false);
-        setIsSyncing(false);
-      }
-    };
-
-    const result = await Swal.fire({
-      title: 'ยืนยันการ Sync ข้อมูล',
-      text: 'ต้องการ Sync ข้อมูลตัวชี้วัด (kpis) จาก Google Sheets หรือไม่?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'ยืนยัน',
-      cancelButtonText: 'ยกเลิก',
-      reverseButtons: true,
-    });
-
-    if (result.isConfirmed) {
-      void doSync();
     }
   };
 
@@ -389,19 +344,6 @@ export default function DbManagePage() {
                         >
                           <Trash2 size={14} />
                           ล้าง
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!table.canSync || isSyncing}
-                          onClick={() => handleSync(table)}
-                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                            table.canSync && !isSyncing
-                              ? 'border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100'
-                              : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
-                          }`}
-                        >
-                          <RefreshCw size={14} />
-                          Sync
                         </button>
                         <button
                           type="button"

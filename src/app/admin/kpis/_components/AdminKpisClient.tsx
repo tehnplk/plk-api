@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useMemo, useState, useTransition, type ReactNode } from 'react';
+import { useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { toast } from 'react-toastify';
@@ -36,6 +37,8 @@ export default function AdminKpisClient({ initialKpis }: Props) {
   const router = useRouter();
   const [banner, setBanner] = useState<Banner | null>(null);
 
+  const formRef = useRef<HTMLFormElement | null>(null);
+
   const [formMode, setFormMode] = useState<ModalMode | null>(null);
   const [selectedKpi, setSelectedKpi] = useState<Kpi | null>(null);
 
@@ -60,12 +63,35 @@ export default function AdminKpisClient({ initialKpis }: Props) {
     setFormMode('edit');
   };
 
+  const isDuplicateKpiIdError = (errorText?: string | null) => {
+    const text = (errorText ?? '').toLowerCase();
+    return (
+      text.includes('kpi id already exists') ||
+      text.includes('already exists') ||
+      text.includes('รหัส kpi') ||
+      text.includes('ซ้ำ')
+    );
+  };
+
+  const focusKpiIdField = () => {
+    const formEl = formRef.current;
+    if (!formEl) return;
+    const idInput = formEl.querySelector<HTMLInputElement>('input[name="id"]');
+    if (!idInput) return;
+    idInput.focus();
+    idInput.select();
+  };
+
   const handleSubmit = async (formData: FormData) => {
     setBanner(null);
 
     if (formMode === 'edit' && selectedKpi?.id) {
       const result = await updateKpiMutation(selectedKpi.id, formData);
       if (!result.success) {
+        if (isDuplicateKpiIdError(result.error)) {
+          toast.error('รหัสตัวชี้วัดซ้ำ');
+          focusKpiIdField();
+        }
         setBanner({ type: 'error', text: result.error ?? 'Update failed' });
         return;
       }
@@ -79,6 +105,10 @@ export default function AdminKpisClient({ initialKpis }: Props) {
 
     const result = await createKpiMutation(formData);
     if (!result.success) {
+      if (isDuplicateKpiIdError(result.error)) {
+        toast.error('รหัสตัวชี้วัดซ้ำ');
+        focusKpiIdField();
+      }
       setBanner({ type: 'error', text: result.error ?? 'Create failed' });
       return;
     }
@@ -221,6 +251,7 @@ export default function AdminKpisClient({ initialKpis }: Props) {
           onClose={closeFormModal}
         >
           <form
+            ref={formRef}
             key={formMode === 'create' ? 'create' : (selectedKpi?.id ?? 'edit')}
             onSubmit={(e) => {
               e.preventDefault();

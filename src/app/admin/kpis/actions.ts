@@ -69,6 +69,8 @@ export async function createKpiMutation(formData: FormData) {
 async function updateKpi(id: string, formData: FormData) {
   try {
     await requireAdminRole();
+    const newId = formData.get('id') as string;
+    
     const data = {
       name: formData.get('name') as string,
       evaluation_criteria: formData.get('evaluation_criteria') as string,
@@ -83,6 +85,32 @@ async function updateKpi(id: string, formData: FormData) {
       kpi_type: formData.get('kpi_type') as string,
       template_url: formData.get('template_url') as string || null,
     };
+
+    // If ID is being changed, check if new ID already exists
+    if (newId !== id) {
+      const existingKpi = await prisma.kpis.findUnique({
+        where: { id: newId }
+      });
+
+      if (existingKpi) {
+        return { success: false, error: 'รหัส KPI นี้มีในระบบแล้ว' };
+      }
+
+      // Delete old record and create new one with new ID
+      await prisma.kpis.delete({
+        where: { id }
+      });
+
+      const kpi = await prisma.kpis.create({
+        data: {
+          id: newId,
+          ...data
+        }
+      });
+
+      revalidatePath('/admin/kpis');
+      return { success: true, data: kpi };
+    }
 
     const kpi = await prisma.kpis.update({
       where: { id },

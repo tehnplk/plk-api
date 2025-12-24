@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
-import { Database, RefreshCw, Trash2, Eye } from 'lucide-react';
+import { Database, RefreshCw, Trash2, Eye, Download } from 'lucide-react';
 
 interface DbTable {
   name: string;
@@ -28,6 +28,7 @@ export default function DbManagePage() {
   const [filterReportKpiId, setFilterReportKpiId] = useState('');
   const [filterReportYear, setFilterReportYear] = useState('');
   const [filterReportAreaLevel, setFilterReportAreaLevel] = useState('');
+  const [backupLoading, setBackupLoading] = useState(false);
 
   const loadTables = async () => {
     try {
@@ -208,6 +209,40 @@ export default function DbManagePage() {
     }
   };
 
+  const handleBackup = async () => {
+    try {
+      setBackupLoading(true);
+      const res = await fetch('/api/db/backup');
+
+      if (!res.ok) {
+        try {
+          const data = await res.json();
+          throw new Error(data.message || 'ไม่สามารถสำรองข้อมูลได้');
+        } catch (err) {
+          throw err instanceof Error ? err : new Error('ไม่สามารถสำรองข้อมูลได้');
+        }
+      }
+
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const fileName = res.headers.get('X-Backup-Filename') || 'kpi-backup.db';
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      toast.success('สำรองข้อมูลเรียบร้อย');
+    } catch (err) {
+      console.error('Error backing up database:', err);
+      toast.error(err instanceof Error ? err.message : 'ไม่สามารถสำรองข้อมูลได้');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
   const handleView = async (table: DbTable) => {
     try {
       setViewTable(table);
@@ -285,12 +320,23 @@ export default function DbManagePage() {
               <p className="text-sm font-medium text-gray-700">รายการตารางข้อมูล</p>
               <p className="text-xs text-gray-400">แสดงเฉพาะตารางหลักที่ใช้ในระบบ KPI</p>
             </div>
-            {loading && (
-              <div className="flex items-center gap-2 text-sm text-blue-600">
-                <RefreshCw size={14} className="animate-spin" />
-                กำลังโหลด...
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {loading && (
+                <div className="flex items-center gap-2 text-sm text-blue-600">
+                  <RefreshCw size={14} className="animate-spin" />
+                  กำลังโหลด...
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleBackup}
+                disabled={backupLoading}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {backupLoading ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+                สำรองข้อมูล
+              </button>
+            </div>
           </div>
 
           {error && (

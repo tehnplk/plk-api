@@ -9,9 +9,11 @@ npm run build || goto :error
 
 rem Start the app on port 82
 npx next start -p 82
+pause
 goto :eof
 
 :error
 echo Build failed. Aborting start.
+pause
 endlocal
 exit /b 1

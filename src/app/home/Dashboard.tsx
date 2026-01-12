@@ -3,8 +3,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
-import { kpiDataCache } from "../../utils/kpiDataCache";
-import { getStatusFromCondition } from "@/utils/conditionEvaluator";
 import { EXCELLENCE_MAP } from "@/constants/excellence";
 
 import DashboardSummarySection from "./DashboardSummarySection";
@@ -119,14 +117,24 @@ export default function Dashboard({
 
   const loadKpiData = async (forceRefresh: boolean = false, areaName?: string) => {
     try {
-      // ส่ง areaName ไปให้ API กรองตามอำเภอ (ถ้าไม่ใช่ ALL)
-      const effectiveAreaName = areaName === 'ALL' ? undefined : areaName;
-      const data = await kpiDataCache.loadData(forceRefresh, effectiveAreaName);
-      setKpiData(data);
+      // ใช้ API ใหม่ /api/kpi/dashboard ที่คำนวณสถานะจาก kpi_report โดยใช้ SUM/GROUP BY
+      const params = new URLSearchParams();
+      params.set('moneyYear', String(moneyYear));
+      if (areaName && areaName !== 'ALL') {
+        params.set('areaName', areaName);
+      }
+      
+      const response = await fetch(`/api/kpi/dashboard?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+      
+      const json = await response.json();
+      setKpiData(json.data || []);
       setRefreshCounter((prev) => prev + 1);
 
       if (forceRefresh) {
-        console.log("KPI data refreshed from database");
+        console.log("KPI data refreshed from dashboard API");
         toast.success("ข้อมูล KPI อัปเดตเรียบร้อย", {
           position: "top-right",
           autoClose: 3000,
@@ -185,33 +193,20 @@ export default function Dashboard({
   }, [selectedDistrictScope]);
 
   const stats = useMemo(() => {
-    // สรุปตัวเลขตามข้อมูลจริงจากฐานข้อมูล
-    // total นับจาก kpis (จำนวนตัวชี้วัดทั้งหมด)
-    // pass/fail/pending คำนวณจาก kpi_report
-    let total = kpiData.length; // นับจาก kpis เสมอ
+    // ใช้ข้อมูลจาก API โดยตรง - status ถูกคำนวณมาแล้วจาก kpi_report
+    let total = kpiData.length;
     let passCount = 0;
     let failCount = 0;
     let pendingCount = 0;
 
-    // คำนวณจาก kpiData โดยตรง (ข้อมูลจาก /api/kpi/database ที่กรองตาม areaName แล้ว)
-    // ทั้งกรณี "ภาพรวมจังหวัด" และ "เลือกอำเภอเฉพาะ" ใช้วิธีเดียวกัน
-    // เพราะ API กรอง kpi_report.area_name ตาม selectedDistrictScope แล้ว
+    // นับจาก status ที่ API คำนวณมาแล้ว
     kpiData.forEach((kpi: any) => {
-      const sumResult = kpi.sum_result;
-      const condition = kpi.condition;
-      const targetResult = kpi.target_result;
-
-      if (sumResult === null || sumResult === undefined || sumResult === '' || sumResult === '-') {
-        pendingCount++;
+      if (kpi.status === 'pass') {
+        passCount++;
+      } else if (kpi.status === 'fail') {
+        failCount++;
       } else {
-        const status = getStatusFromCondition(condition, targetResult, parseFloat(sumResult));
-        if (status === 'pass') {
-          passCount++;
-        } else if (status === 'fail') {
-          failCount++;
-        } else {
-          pendingCount++;
-        }
+        pendingCount++;
       }
     });
 
@@ -219,20 +214,8 @@ export default function Dashboard({
     const percentPass =
       total === 0 ? "0.0" : ((passCount / denom) * 100).toFixed(1);
 
-    // สรุปตาม 5 Excellence
-    let excellenceStats: {
-      title: string;
-      total: number;
-      pass: number;
-      fail: number;
-      pending: number;
-      percent: string | number;
-    }[];
-
-    // คำนวณจาก kpiData โดยอ้างอิง kpis.excellence
-    // ทั้งกรณี "ภาพรวมจังหวัด" และ "เลือกอำเภอเฉพาะ" ใช้วิธีเดียวกัน
-    // เพราะ API กรอง kpi_report.area_name ตาม selectedDistrictScope แล้ว
-    excellenceStats = Object.entries(EXCELLENCE_MAP).map(
+    // สรุปตาม 5 Excellence - ใช้ status จาก API โดยตรง
+    const excellenceStats = Object.entries(EXCELLENCE_MAP).map(
       ([code, label]) => {
         const items = kpiData.filter(
           (item: any) => String(item.excellence ?? "") === code
@@ -243,21 +226,12 @@ export default function Dashboard({
         let exPending = 0;
         
         items.forEach((kpi: any) => {
-          const sumResult = kpi.sum_result;
-          const condition = kpi.condition;
-          const targetResult = kpi.target_result;
-          
-          if (sumResult === null || sumResult === undefined || sumResult === '' || sumResult === '-') {
-            exPending++;
+          if (kpi.status === 'pass') {
+            exPass++;
+          } else if (kpi.status === 'fail') {
+            exFail++;
           } else {
-            const status = getStatusFromCondition(condition, targetResult, parseFloat(sumResult));
-            if (status === 'pass') {
-              exPass++;
-            } else if (status === 'fail') {
-              exFail++;
-            } else {
-              exPending++;
-            }
+            exPending++;
           }
         });
         

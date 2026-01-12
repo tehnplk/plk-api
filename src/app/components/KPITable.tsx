@@ -220,24 +220,16 @@ const KPITable: React.FC<KPITableProps> = ({
       setLoading(true);
       setError(null);
 
-      // TEAM_001: When a specific district is selected from Home, load KPI data from kpi_report
-      const isDistrictScope =
-        selectedDistrictScope && selectedDistrictScope !== 'ALL';
-
-      let url = '/api/kpi/database';
-
-      if (isDistrictScope) {
-        const params = new URLSearchParams();
-        params.set('moneyYear', String(moneyYear));
-        params.set('areaName', selectedDistrictScope as string);
-        if (selectedDepartment && selectedDepartment !== 'ทั้งหมด') {
-          params.set('department', selectedDepartment);
-        }
-        if (selectedKpiType && selectedKpiType !== 'ทั้งหมด') {
-          params.set('kpiType', selectedKpiType);
-        }
-        url = `/api/kpi/report/kpi-list?${params.toString()}`;
+      // ใช้ /api/kpi/dashboard เพื่อให้สถานะตรงกับ Dashboard
+      const params = new URLSearchParams();
+      params.set('moneyYear', String(moneyYear));
+      
+      // ถ้าเลือกอำเภอเฉพาะ ให้กรองตามอำเภอนั้น
+      if (selectedDistrictScope && selectedDistrictScope !== 'ALL') {
+        params.set('areaName', selectedDistrictScope);
       }
+      
+      const url = `/api/kpi/dashboard?${params.toString()}`;
 
       console.log('🔄 Fetching data from URL:', url);
       const response = await fetch(url);
@@ -268,6 +260,9 @@ const KPITable: React.FC<KPITableProps> = ({
           divideNumber = isNaN(parsed) ? undefined : parsed;
         }
 
+        // ใช้ status ที่ API คำนวณมาแล้วโดยตรง (เหมือนกับ Dashboard)
+        const apiStatus = raw.status as KPIStatus || 'pending';
+        
         return {
           id: String(raw.id ?? `KPI-${index + 1}`),
           name: String(raw.name ?? ''),
@@ -276,13 +271,7 @@ const KPITable: React.FC<KPITableProps> = ({
           level,
           department: String(raw.ssj_department ?? ''),
           result: raw.sum_result && raw.sum_result !== '' ? String(raw.sum_result) : null,
-          status: raw.sum_result && raw.sum_result !== '' ? getEvaluatedStatus({
-            ...raw,
-            result: raw.sum_result,
-            target: raw.target_result,
-            sum_kpi_target: raw.sum_kpi_target,
-            condition: raw.condition
-          }) : 'pending',
+          status: apiStatus,
           target: typeof raw.target_result === 'number' ? raw.target_result : undefined,
           sum_kpi_target: typeof raw.sum_kpi_target === 'number' ? raw.sum_kpi_target : undefined,
           condition: raw.condition,

@@ -176,7 +176,7 @@ export default function ProfilePage() {
           </div>
           {/* Dashboard Button */}
           <Link
-            href="/home"
+            href="/home?kpix"
             className="ml-auto px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 cursor-pointer"
           >
             <LayoutDashboard size={18} />

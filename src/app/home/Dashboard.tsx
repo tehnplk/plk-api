@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
 import { EXCELLENCE_MAP } from "@/constants/excellence";
+import { getDashboardData } from "@/app/actions/dashboardActions";
 
 import DashboardSummarySection from "./DashboardSummarySection";
 import DashboardExcellenceSection from "./DashboardExcellenceSection";
@@ -117,24 +118,21 @@ export default function Dashboard({
 
   const loadKpiData = async (forceRefresh: boolean = false, areaName?: string) => {
     try {
-      // ใช้ API ใหม่ /api/kpi/dashboard ที่คำนวณสถานะจาก kpi_report โดยใช้ SUM/GROUP BY
-      const params = new URLSearchParams();
-      params.set('moneyYear', String(moneyYear));
-      if (areaName && areaName !== 'ALL') {
-        params.set('areaName', areaName);
+      // ใช้ Server Action แทน fetch API
+      const result = await getDashboardData(
+        moneyYear,
+        areaName && areaName !== 'ALL' ? areaName : undefined
+      );
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch dashboard data');
       }
       
-      const response = await fetch(`/api/kpi/dashboard?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch dashboard data');
-      }
-      
-      const json = await response.json();
-      setKpiData(json.data || []);
+      setKpiData(result.data || []);
       setRefreshCounter((prev) => prev + 1);
 
       if (forceRefresh) {
-        console.log("KPI data refreshed from dashboard API");
+        console.log("KPI data refreshed from server action");
         toast.success("ข้อมูล KPI อัปเดตเรียบร้อย", {
           position: "top-right",
           autoClose: 3000,

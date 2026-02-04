@@ -123,10 +123,10 @@ export default function AdminKpisClient({ initialKpis }: Props) {
 
     const res = await Swal.fire({
       title: 'Confirm delete',
-      html: `ต้องการลบ KPI: <strong>${kpi.id}</strong> หรือไม่?<br/><br/>พิมพ์รหัส <strong>${kpi.id}</strong> เพื่อยืนยัน`,
+      html: `ต้องการลบ <strong>${kpi.id}</strong> หรือไม่?<br/><br/>พิมพ์คำว่า <strong>ลบ</strong> เพื่อยืนยัน`,
       icon: 'warning',
       input: 'text',
-      inputPlaceholder: `พิมพ์ ${kpi.id}`,
+      inputPlaceholder: `พิมพ์ 'ลบ' เพื่อยืนยัน`,
       showCancelButton: true,
       confirmButtonText: 'Delete',
       cancelButtonText: 'Cancel',
@@ -138,8 +138,8 @@ export default function AdminKpisClient({ initialKpis }: Props) {
           Swal.showValidationMessage('กรุณาพิมพ์รหัสตัวชี้วัด');
           return false;
         }
-        if (value !== kpi.id) {
-          Swal.showValidationMessage('รหัสตัวชี้วัดไม่ตรง');
+        if (value !== 'ลบ') {
+          Swal.showValidationMessage('กรุณาพิมพ์ "ลบ" เพื่อยืนยัน');
           return false;
         }
         const result = await deleteKpiMutation(kpi.id);

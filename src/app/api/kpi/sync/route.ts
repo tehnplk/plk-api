@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { runDbCleansing } from '@/lib/dbCleansing';
 
 const ENDPOINT_URL = process.env.ENDPOINT_URL;
 
@@ -107,6 +108,12 @@ export async function POST(request: NextRequest) {
     const results = await Promise.all(syncPromises);
     
     console.log(`Successfully synced ${results.length} KPI records to database`);
+
+    try {
+      await runDbCleansing();
+    } catch (error) {
+      console.error('Post-sync DB cleansing failed:', error);
+    }
     
     // Sync departments from unique ssj_department values
     console.log('Syncing departments...');

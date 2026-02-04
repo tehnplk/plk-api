@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import { getStatusFromCondition } from '@/utils/conditionEvaluator';
+import { runDbCleansing } from '@/lib/dbCleansing';
 
 export async function POST(request: NextRequest) {
   try {
@@ -134,6 +135,12 @@ export async function POST(request: NextRequest) {
     
     // Execute all save operations
     await Promise.all(savePromises);
+
+    try {
+      await runDbCleansing();
+    } catch (error) {
+      console.error('Post-save DB cleansing failed:', error);
+    }
     
     return NextResponse.json({ 
       message: 'Data saved successfully',

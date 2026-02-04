@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireAdminRole } from '@/lib/adminAuth';
+import { runDbCleansing } from '@/lib/dbCleansing';
 
 export async function getKpis() {
   try {
@@ -52,6 +53,12 @@ async function createKpi(formData: FormData) {
     const kpi = await prisma.kpis.create({
       data
     });
+
+    try {
+      await runDbCleansing();
+    } catch (error) {
+      console.error('Post-save DB cleansing failed:', error);
+    }
 
     revalidatePath('/admin/kpis');
     return { success: true, data: kpi };
@@ -108,6 +115,12 @@ async function updateKpi(id: string, formData: FormData) {
         }
       });
 
+      try {
+        await runDbCleansing();
+      } catch (error) {
+        console.error('Post-save DB cleansing failed:', error);
+      }
+
       revalidatePath('/admin/kpis');
       return { success: true, data: kpi };
     }
@@ -116,6 +129,12 @@ async function updateKpi(id: string, formData: FormData) {
       where: { id },
       data
     });
+
+    try {
+      await runDbCleansing();
+    } catch (error) {
+      console.error('Post-save DB cleansing failed:', error);
+    }
 
     revalidatePath('/admin/kpis');
     return { success: true, data: kpi };

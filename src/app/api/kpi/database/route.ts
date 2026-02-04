@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
+import { runDbCleansing } from '@/lib/dbCleansing';
 
 export async function GET(request: NextRequest) {
   try {
@@ -174,6 +175,12 @@ export async function POST(request: NextRequest) {
         last_synced_at: new Date(),
       },
     });
+
+    try {
+      await runDbCleansing();
+    } catch (error) {
+      console.error('Post-save DB cleansing failed:', error);
+    }
 
     return NextResponse.json({
       success: true,

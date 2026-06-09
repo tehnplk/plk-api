@@ -3,13 +3,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
 }
 
 model Kpis {
   id                  String   @id
-  name                String
-  evaluation_criteria String
+  name                String   @db.Text
+  evaluation_criteria String   @db.Text
   condition           String
   target_result       Float
   divide_number       Float
@@ -19,7 +19,7 @@ model Kpis {
   ssj_pm              String?
   moph_department     String?
   kpi_type            String
-  template_url        String?
+  template_url        String?  @db.Text
   last_synced_at      DateTime @default(now())
   created_at          DateTime @default(now())
   updated_at          DateTime @updatedAt
@@ -34,7 +34,7 @@ model KpiReport {
   area_name  String
   area_level String?
   kpi_id     String
-  kpi_name   String
+  kpi_name   String   @db.Text
   kpi_target Float?
   result_oct Float?
   result_nov Float?
@@ -64,7 +64,7 @@ model AccountUser {
   full_name_th       String
   full_name_en       String?
   email              String?
-  organization       String?
+  organization       String?  @db.Text
   department         String?  @default("")
   role               String?  @default("")
   active             Boolean  @default(false)

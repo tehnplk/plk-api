@@ -33,12 +33,9 @@ export async function POST(request: NextRequest) {
         break;
     }
 
-    // Reset auto id (ถ้ามี) ใน sqlite_sequence โดยใช้ $executeRawUnsafe รูปแบบ string ปกติ
-    // ตารางที่ไม่มี auto-increment จะไม่มี row ใน sqlite_sequence อยู่แล้ว การลบจะไม่กระทบอะไร
-    await prisma.$executeRawUnsafe(
-      'DELETE FROM sqlite_sequence WHERE name = ?',
-      t,
-    );
+    if (t === 'account_user') {
+      await prisma.$executeRawUnsafe('ALTER TABLE account_user AUTO_INCREMENT = 1');
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,11 +1,15 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaLibSql } from '@prisma/adapter-libsql'
+import { PrismaMariaDb } from '@prisma/adapter-mariadb'
 
-// ใช้ DATABASE_URL จาก env ถ้ามี ไม่มีก็ fallback เป็นไฟล์ kpi.db ในโฟลเดอร์ database
-const dbUrl = process.env.DATABASE_URL || 'file:./database/kpi.db'
+const databaseUrl = process.env.DATABASE_URL ?? 'mysql://root:112233@localhost:3306/plkkpi'
+const parsedDatabaseUrl = new URL(databaseUrl)
 
-const adapter = new PrismaLibSql({
-  url: dbUrl,
+const adapter = new PrismaMariaDb({
+  host: parsedDatabaseUrl.hostname,
+  port: parsedDatabaseUrl.port ? Number(parsedDatabaseUrl.port) : 3306,
+  user: decodeURIComponent(parsedDatabaseUrl.username),
+  password: decodeURIComponent(parsedDatabaseUrl.password),
+  database: decodeURIComponent(parsedDatabaseUrl.pathname.replace(/^\//, '')),
 })
 
 const globalForPrisma = globalThis as unknown as {

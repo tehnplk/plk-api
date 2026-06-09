@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireAdminRole } from '@/lib/adminAuth';
 import { runDbCleansing } from '@/lib/dbCleansing';
+import { validateKpiId } from '@/utils/kpiId';
 
 export async function getKpis() {
   try {
@@ -24,8 +25,13 @@ export async function getKpis() {
 async function createKpi(formData: FormData) {
   try {
     await requireAdminRole();
+    const idResult = validateKpiId(formData.get('id'));
+    if (!idResult.success) {
+      return { success: false, error: idResult.error };
+    }
+
     const data = {
-      id: formData.get('id') as string,
+      id: idResult.id,
       name: formData.get('name') as string,
       evaluation_criteria: formData.get('evaluation_criteria') as string,
       condition: formData.get('condition') as string,
@@ -76,7 +82,12 @@ export async function createKpiMutation(formData: FormData) {
 async function updateKpi(id: string, formData: FormData) {
   try {
     await requireAdminRole();
-    const newId = formData.get('id') as string;
+    const idResult = validateKpiId(formData.get('id'));
+    if (!idResult.success) {
+      return { success: false, error: idResult.error };
+    }
+
+    const newId = idResult.id;
     
     const data = {
       name: formData.get('name') as string,
@@ -103,16 +114,21 @@ async function updateKpi(id: string, formData: FormData) {
         return { success: false, error: 'รหัส KPI นี้มีในระบบแล้ว' };
       }
 
-      // Delete old record and create new one with new ID
-      await prisma.kpis.delete({
-        where: { id }
-      });
+      const kpi = await prisma.$transaction(async (tx) => {
+        const updated = await tx.kpis.update({
+          where: { id },
+          data: {
+            id: newId,
+            ...data
+          }
+        });
 
-      const kpi = await prisma.kpis.create({
-        data: {
-          id: newId,
-          ...data
-        }
+        await tx.kpiReport.updateMany({
+          where: { kpi_id: id },
+          data: { kpi_id: newId },
+        });
+
+        return updated;
       });
 
       try {

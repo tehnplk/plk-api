@@ -5,6 +5,9 @@ type DbCleansingResult = {
     kpis: number;
     kpi_report: number;
   };
+  deleted_invalid_area: {
+    kpi_report: number;
+  };
   updated: {
     kpis: number;
     kpi_report: number;
@@ -12,7 +15,13 @@ type DbCleansingResult = {
 };
 
 export async function runDbCleansing(): Promise<DbCleansingResult> {
-  const [kpisDeletedDuplicates, kpiReportDeletedDuplicates, kpisUpdated, kpiReportUpdated] =
+  const [
+    kpisDeletedDuplicates,
+    kpiReportDeletedDuplicates,
+    invalidDistrictProvinceReportsDeleted,
+    kpisUpdated,
+    kpiReportUpdated,
+  ] =
     await prisma.$transaction([
       prisma.$executeRaw`
         DELETE FROM kpis
@@ -40,6 +49,13 @@ export async function runDbCleansing(): Promise<DbCleansingResult> {
             )
         )
       `,
+      prisma.$executeRaw`
+        DELETE r
+        FROM kpi_report r
+        INNER JOIN kpis k ON k.id = r.kpi_id
+        WHERE k.area_level = 'อำเภอ'
+          AND r.area_name = 'จังหวัดพิษณุโลก'
+      `,
       prisma.$executeRaw`UPDATE kpis SET id = TRIM(id) WHERE id != TRIM(id)`,
       prisma.$executeRaw`UPDATE kpi_report SET kpi_id = TRIM(kpi_id) WHERE kpi_id != TRIM(kpi_id)`,
     ]);
@@ -48,6 +64,9 @@ export async function runDbCleansing(): Promise<DbCleansingResult> {
     deleted_duplicates: {
       kpis: Number(kpisDeletedDuplicates ?? 0),
       kpi_report: Number(kpiReportDeletedDuplicates ?? 0),
+    },
+    deleted_invalid_area: {
+      kpi_report: Number(invalidDistrictProvinceReportsDeleted ?? 0),
     },
     updated: {
       kpis: Number(kpisUpdated ?? 0),

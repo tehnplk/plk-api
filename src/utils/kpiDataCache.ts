@@ -10,7 +10,7 @@ export interface KpiItem {
   level: 'province' | 'district';
   department: string;
   target: number | undefined;
-  divideNumber: number | undefined;
+  rateFormula: string | undefined;
   result: string | null;
   status: KPIStatus;
   excellence: string;
@@ -73,7 +73,7 @@ export function transformKpiData(rawData: any[]): KpiItem[] {
     level: item.area_level === 'อำเภอ' ? 'district' : 'province',
     department: String(item.ssj_department ?? ''),
     target: item.target_result ? Number(item.target_result) : undefined,
-    divideNumber: item.divide_number ? Number(item.divide_number) : undefined,
+    rateFormula: item.rate_formula || undefined,
     result: item.sum_result ?? null,
     status: 'pending' as KPIStatus,
     condition: String(item.condition ?? ''),

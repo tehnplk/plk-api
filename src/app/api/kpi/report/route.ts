@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import { getStatusFromCondition } from '@/utils/conditionEvaluator';
 import { runDbCleansing } from '@/lib/dbCleansing';
+import { calculateRateFormula } from '@/utils/rateFormula';
 
 export async function POST(request: NextRequest) {
   try {
-    const { moneyYear, kpiId, kpiName, divisionNumber, editableData } = await request.json();
+    const { moneyYear, kpiId, kpiName, editableData } = await request.json();
 
     if (!moneyYear || !kpiId || !editableData) {
       return NextResponse.json(
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
         condition: true,
         target_result: true,
         area_level: true,
+        rate_formula: true,
       },
     });
 
@@ -46,8 +48,7 @@ export async function POST(request: NextRequest) {
       // Calculate rate
       let rate = 0; // Default to 0 instead of null
       if (target !== null && target !== undefined && target > 0) {
-        const divideNumber = divisionNumber || 1;
-        rate = Math.round((total / target) * divideNumber * 100) / 100;
+        rate = calculateRateFormula(kpiMeta?.rate_formula, { A: total, B: target }) ?? 0;
       }
 
       // Compute evaluation status using same logic as KPITable

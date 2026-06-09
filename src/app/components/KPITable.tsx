@@ -79,7 +79,7 @@ export interface KPIItem {
   status: KPIStatus;
   target?: number;
   sum_kpi_target?: number;
-  divideNumber?: number;
+  rateFormula?: string;
   lastUpdated?: string;
   condition?: string;
   kpiType?: string;
@@ -251,15 +251,6 @@ const KPITable: React.FC<KPITableProps> = ({
         if (areaLevel === 'อำเภอ') level = 'district';
         if (areaLevel === 'จังหวัด') level = 'province';
 
-        const divideNumberRaw = raw.divide_number ?? raw.divideNumber;
-        let divideNumber: number | undefined;
-        if (typeof divideNumberRaw === 'number') {
-          divideNumber = divideNumberRaw;
-        } else if (typeof divideNumberRaw === 'string') {
-          const parsed = parseFloat(divideNumberRaw);
-          divideNumber = isNaN(parsed) ? undefined : parsed;
-        }
-
         // ใช้ status ที่ API คำนวณมาแล้วโดยตรง (เหมือนกับ Dashboard)
         const apiStatus = raw.status as KPIStatus || 'pending';
         
@@ -276,7 +267,7 @@ const KPITable: React.FC<KPITableProps> = ({
           sum_kpi_target: typeof raw.sum_kpi_target === 'number' ? raw.sum_kpi_target : undefined,
           condition: raw.condition,
           kpiType: raw.kpi_type,
-          divideNumber,
+          rateFormula: raw.rate_formula ?? raw.rateFormula,
           template_url: raw.template_url,
           ssj_pm: raw.ssj_pm,
           moph_department: raw.moph_department,

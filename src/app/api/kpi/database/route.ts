@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import { runDbCleansing } from '@/lib/dbCleansing';
+import { calculateRateFormula } from '@/utils/rateFormula';
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
     const currentMoneyYear = moneyYear ? parseInt(moneyYear) : currentYear + 544;
 
     // Get sum of monthly results and targets from kpi_report for each KPI
-    // This matches the modal's summary row calculation: (grandTotal / totalTarget) * divideNumber
+    // This matches the modal's summary row calculation using rate_formula.
     
     // Build where clause for kpi_report
     const reportWhereClause: any = {
@@ -104,10 +105,10 @@ export async function GET(request: NextRequest) {
       let summaryRate: number | null = null;
       
       if (reportData && reportData.totalTarget > 0) {
-        // Calculate rate: (grandTotal / totalTarget) * divideNumber
-        // Same formula as modal summary row
-        const divideNumber = kpi.divide_number || 1;
-        summaryRate = Math.round((reportData.grandTotal / reportData.totalTarget) * divideNumber * 100) / 100;
+        summaryRate = calculateRateFormula(kpi.rate_formula, {
+          A: reportData.grandTotal,
+          B: reportData.totalTarget,
+        });
       }
       
       return {
@@ -116,7 +117,7 @@ export async function GET(request: NextRequest) {
         evaluation_criteria: kpi.evaluation_criteria,
         condition: kpi.condition,
         target_result: kpi.target_result,
-        divide_number: kpi.divide_number,
+        rate_formula: kpi.rate_formula,
         sum_result: summaryRate !== null ? summaryRate.toFixed(2) : null,
         excellence: kpi.excellence,
         area_level: kpi.area_level,

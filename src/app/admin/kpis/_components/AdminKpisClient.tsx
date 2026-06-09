@@ -17,7 +17,7 @@ type Kpi = {
   evaluation_criteria: string;
   condition: string;
   target_result: number;
-  divide_number: number;
+  rate_formula: string;
   excellence: string;
   area_level: string;
   ssj_department: string;

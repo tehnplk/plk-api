@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import { getStatusFromCondition } from '@/utils/conditionEvaluator';
+import { calculateRateFormula } from '@/utils/rateFormula';
 
 // API สำหรับ Dashboard - คำนวณสถานะจาก kpi_report โดยใช้ SUM และ GROUP BY kpi_id
 export async function GET(request: NextRequest) {
@@ -84,10 +85,10 @@ export async function GET(request: NextRequest) {
       let status: 'pass' | 'fail' | 'pending' = 'pending';
 
       if (reportData && reportData.totalTarget > 0) {
-        // Calculate rate: (grandTotal / totalTarget) * divideNumber
-        // Same formula as KPIDetailModal summary row
-        const divideNumber = kpi.divide_number || 1;
-        rate = Math.round((reportData.grandTotal / reportData.totalTarget) * divideNumber * 100) / 100;
+        rate = calculateRateFormula(kpi.rate_formula, {
+          A: reportData.grandTotal,
+          B: reportData.totalTarget,
+        });
 
         // Calculate status using same conditions as KPIDetailModal
         const conditionStr = (kpi.condition ?? '').toString().trim();
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
         evaluation_criteria: kpi.evaluation_criteria,
         condition: kpi.condition,
         target_result: kpi.target_result,
-        divide_number: kpi.divide_number,
+        rate_formula: kpi.rate_formula,
         sum_result: rate !== null ? rate.toFixed(2) : null,
         rate,
         status,

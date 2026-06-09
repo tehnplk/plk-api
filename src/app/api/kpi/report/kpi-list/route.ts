@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
         condition: kpi.condition,
         target_result: kpi.target_result,
         sum_kpi_target: targetSumMap.get(kpi.id) || 0,
-        divide_number: kpi.divide_number,
+        rate_formula: kpi.rate_formula,
         sum_result: sumResult,
         excellence: kpi.excellence,
         area_level: kpi.area_level,

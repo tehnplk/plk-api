@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getStatusFromCondition } from '@/utils/conditionEvaluator';
+import { calculateRateFormula } from '@/utils/rateFormula';
 
 export interface DashboardKPI {
   id: string;
@@ -9,7 +10,7 @@ export interface DashboardKPI {
   evaluation_criteria: string | null;
   condition: string | null;
   target_result: number | null;
-  divide_number: number | null;
+  rate_formula: string | null;
   sum_result: string | null;
   rate: number | null;
   status: 'pass' | 'fail' | 'pending';
@@ -122,10 +123,10 @@ export async function getDashboardData(
       let status: 'pass' | 'fail' | 'pending' = 'pending';
 
       if (reportData && reportData.totalTarget > 0) {
-        // Calculate rate: (grandTotal / totalTarget) * divideNumber
-        // Same formula as KPIDetailModal summary row
-        const divideNumber = kpi.divide_number || 1;
-        rate = Math.round((reportData.grandTotal / reportData.totalTarget) * divideNumber * 100) / 100;
+        rate = calculateRateFormula(kpi.rate_formula, {
+          A: reportData.grandTotal,
+          B: reportData.totalTarget,
+        });
 
         // Calculate status using same conditions as KPIDetailModal
         const conditionStr = (kpi.condition ?? '').toString().trim();
@@ -151,7 +152,7 @@ export async function getDashboardData(
         evaluation_criteria: kpi.evaluation_criteria,
         condition: kpi.condition,
         target_result: kpi.target_result,
-        divide_number: kpi.divide_number,
+        rate_formula: kpi.rate_formula,
         sum_result: rate !== null ? rate.toFixed(2) : null,
         rate,
         status,

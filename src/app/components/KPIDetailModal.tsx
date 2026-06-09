@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { MONTH_NAMES, MONTH_FIELDS, DISTRICTS } from '@/config/constants';
 import { toast } from 'react-toastify';
 import { getStatusFromCondition } from '@/utils/conditionEvaluator';
+import { calculateRateFormula } from '@/utils/rateFormula';
 
 interface KPIDetail {
   id: string;
@@ -15,8 +16,7 @@ interface KPIDetail {
   level: string;
   department: string;
   target: number | null;
-  divideNumber: number | null;
-  divisionNumber: number | null;
+  rateFormula: string | null;
   lastUpdated: string | null;
   template_url?: string;
   excellence?: string;
@@ -151,8 +151,7 @@ export default function KPIDetailModal({
           level: kpiMetadata?.area_level === 'อำเภอ' ? 'อำเภอ' : 'จังหวัด',
           department: kpiMetadata?.ssj_department || sourceData.area_name || 'ไม่ทราบ',
           target: kpiMetadata?.target_result || sourceData.kpi_target || null,
-          divideNumber: kpiMetadata?.divide_number || sourceData.divide_number || null,
-          divisionNumber: kpiMetadata?.divide_number || sourceData.divide_number || null,
+          rateFormula: kpiMetadata?.rate_formula || sourceData.rate_formula || '{A}/{B}x100',
           lastUpdated: new Date().toISOString(),
           template_url: kpiMetadata?.template_url || '',
           excellence: kpiMetadata?.excellence || '',
@@ -201,14 +200,9 @@ export default function KPIDetailModal({
                     ? Number(record.kpi_target)
                     : null;
 
-                const divideNumber =
-                  kpiMetadata?.divide_number !== null && kpiMetadata?.divide_number !== undefined
-                    ? Number(kpiMetadata.divide_number)
-                    : 1;
-
                 const rate =
                   target !== null && target !== undefined && target > 0
-                    ? Math.round((total / target) * divideNumber * 100) / 100
+                    ? calculateRateFormula(kpiMetadata?.rate_formula, { A: total, B: target }) ?? 0
                     : 0;
 
                 // คำนวณสถานะแยกรายพื้นที่
@@ -490,7 +484,7 @@ export default function KPIDetailModal({
           moneyYear,
           kpiId,
           kpiName: kpiDetail?.name || '',
-          divisionNumber: kpiDetail?.divisionNumber,
+          rateFormula: kpiDetail?.rateFormula,
           editableData
         }),
       });
@@ -512,8 +506,7 @@ export default function KPIDetailModal({
           
           let rate = 0; // Default to 0 instead of null
           if (target !== null && target !== undefined && target > 0) {
-            const divideNumber = kpiDetail?.divisionNumber || 1;
-            rate = Math.round((total / target) * divideNumber * 100) / 100;
+            rate = calculateRateFormula(kpiDetail?.rateFormula, { A: total, B: target }) ?? 0;
           }
 
           // Recompute status per area using same logic as KPITable
@@ -566,9 +559,8 @@ export default function KPIDetailModal({
 
       const totalTarget = updatedDistrictData.reduce((sum, d) => sum + (d.target || 0), 0);
       const grandTotal = updatedDistrictData.reduce((sum, d) => sum + d.total, 0);
-      const divideNumber = kpiDetail?.divideNumber || 1;
       const summaryRate = totalTarget > 0
-        ? Math.round((grandTotal / totalTarget) * divideNumber * 100) / 100
+        ? calculateRateFormula(kpiDetail?.rateFormula, { A: grandTotal, B: totalTarget }) ?? 0
         : 0;
 
       let summaryStatus: 'pass' | 'fail' | 'pending' = 'pending';
@@ -720,8 +712,8 @@ export default function KPIDetailModal({
               <p className="text-red-600">{error || 'ไม่พบข้อมูล KPI'}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
-              {/* Left Column - KPI Description (30%) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column - KPI Description (25%) */}
               <div className="lg:col-span-3">
                 <div className="bg-white rounded-xl border p-4">
                   <div className="space-y-3">
@@ -760,10 +752,10 @@ export default function KPIDetailModal({
                       <p className="text-gray-800 font-medium text-sm">{moneyYear}</p>
                     </div>
 
-                    {kpiDetail.divisionNumber !== null && (
+                    {kpiDetail.rateFormula !== null && (
                       <div>
-                        <label className="text-sm font-medium text-gray-500">ตัวเลขที่ใช้คิดอัตรา</label>
-                        <p className="text-gray-800 font-medium text-sm">{kpiDetail.divisionNumber}</p>
+                        <label className="text-sm font-medium text-gray-500">สูตรที่ใช้คำนวณอัตรา</label>
+                        <p className="text-gray-800 font-medium text-sm">{kpiDetail.rateFormula}</p>
                       </div>
                     )}
 
@@ -775,12 +767,28 @@ export default function KPIDetailModal({
                         </p>
                       </div>
                     )}
+
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Template</label>
+                      {kpiDetail.template_url ? (
+                        <a
+                          href={kpiDetail.template_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-sm font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2"
+                        >
+                          กดดู
+                        </a>
+                      ) : (
+                        <p className="text-gray-800 font-medium text-sm">-</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column - Table and Chart (70%) */}
-              <div className="lg:col-span-7 space-y-4">
+              {/* Right Column - Table and Chart (75%) */}
+              <div className="lg:col-span-9 space-y-4">
                 {/* Data Table */}
                 {districtData.length > 0 && (
                   <div className="bg-white rounded-xl border p-4">
@@ -819,13 +827,13 @@ export default function KPIDetailModal({
                         <thead className="bg-gray-50 text-gray-600 uppercase font-medium">
                           <tr>
                             <th className="px-2 py-2 text-left border border-gray-200">พื้นที่</th>
-                            <th className="px-2 py-2 text-center border border-gray-200">เป้า</th>
+                            <th className="px-2 py-2 text-center border border-gray-200">เป้า (B)</th>
                             {MONTH_NAMES.map((month) => (
                               <th key={month} className="px-2 py-2 text-center border border-gray-200">
                                 {month}
                               </th>
                             ))}
-                            <th className="px-2 py-2 text-center border border-gray-200">รวม</th>
+                            <th className="px-2 py-2 text-center border border-gray-200">รวม (A)</th>
                             <th className="px-2 py-2 text-center border border-gray-200">Rate</th>
                             <th className="px-2 py-2 text-center border border-gray-200">สถานะ</th>
                           </tr>
@@ -925,9 +933,8 @@ export default function KPIDetailModal({
                               visibleData.reduce((sum, d) => sum + (d.monthlyValues[monthIndex] || 0), 0)
                             );
                             const grandTotal = visibleData.reduce((sum, d) => sum + d.total, 0);
-                            const divideNumber = kpiDetail?.divideNumber || 1;
                             const summaryRate = totalTarget > 0 
-                              ? Math.round((grandTotal / totalTarget) * divideNumber * 100) / 100
+                              ? calculateRateFormula(kpiDetail?.rateFormula, { A: grandTotal, B: totalTarget }) ?? 0
                               : 0;
 
                             // Compute overall summary status using same logic as per-area rows

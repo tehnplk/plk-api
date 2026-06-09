@@ -12,7 +12,7 @@ model Kpis {
   evaluation_criteria String   @db.Text
   condition           String
   target_result       Float
-  divide_number       Float
+  rate_formula        String   @db.VarChar(255)
   excellence          String
   area_level          String
   ssj_department      String

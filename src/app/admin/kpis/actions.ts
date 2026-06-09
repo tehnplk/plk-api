@@ -30,7 +30,7 @@ async function createKpi(formData: FormData) {
       evaluation_criteria: formData.get('evaluation_criteria') as string,
       condition: formData.get('condition') as string,
       target_result: parseFloat(formData.get('target_result') as string) || 0,
-      divide_number: parseFloat(formData.get('divide_number') as string) || 100,
+      rate_formula: (formData.get('rate_formula') as string)?.trim() || '{A}/{B}x100',
 
       excellence: formData.get('excellence') as string,
       area_level: formData.get('area_level') as string,
@@ -83,7 +83,7 @@ async function updateKpi(id: string, formData: FormData) {
       evaluation_criteria: formData.get('evaluation_criteria') as string,
       condition: formData.get('condition') as string,
       target_result: parseFloat(formData.get('target_result') as string) || 0,
-      divide_number: parseFloat(formData.get('divide_number') as string) || 100,
+      rate_formula: (formData.get('rate_formula') as string)?.trim() || '{A}/{B}x100',
       excellence: formData.get('excellence') as string,
       area_level: formData.get('area_level') as string,
       ssj_department: formData.get('ssj_department') as string,

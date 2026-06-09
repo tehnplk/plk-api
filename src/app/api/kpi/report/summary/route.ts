@@ -3,6 +3,7 @@ import { prisma } from '../../../../../lib/prisma';
 import { getStatusFromCondition } from '@/utils/conditionEvaluator';
 import { DISTRICTS } from '@/config/constants';
 import { EXCELLENCE_MAP } from '@/constants/excellence';
+import { calculateRateFormula } from '@/utils/rateFormula';
 
 // GET /api/kpi/report/summary?moneyYear=2569
 // สรุปข้อมูลรายอำเภอจากตาราง kpi_report โดย join กับ kpis เพื่อประเมินสถานะตาม condition/target
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
         id: true,
         condition: true,
         target_result: true,
-        divide_number: true,
+        rate_formula: true,
         excellence: true,
       },
     });
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
     const kpiMetaMap = new Map<string, { 
       condition: string; 
       target_result: number; 
-      divide_number: number;
+      rate_formula: string;
       excellence: string | null 
     }>();
     const kpiIds = allDistrictKpis.map((k) => k.id);
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
       kpiMetaMap.set(kpi.id, {
         condition: kpi.condition,
         target_result: kpi.target_result,
-        divide_number: kpi.divide_number || 1,
+        rate_formula: kpi.rate_formula || '{A}/{B}x100',
         excellence: (kpi as any).excellence ?? null,
       });
     });
@@ -106,11 +107,9 @@ export async function GET(request: NextRequest) {
                         (sum.result_jul || 0) + (sum.result_aug || 0) + (sum.result_sep || 0);
       const totalTarget = sum.kpi_target || 0;
       
-      // คำนวณ rate เหมือน modal: (grandTotal / totalTarget) * divideNumber
       const meta = kpiMetaMap.get(report.kpi_id);
-      const divideNumber = meta?.divide_number || 1;
       const rate = totalTarget > 0 
-        ? Math.round((grandTotal / totalTarget) * divideNumber * 100) / 100
+        ? calculateRateFormula(meta?.rate_formula, { A: grandTotal, B: totalTarget })
         : null;
       
       const key = `${report.area_name}::${report.kpi_id}`;
@@ -199,7 +198,7 @@ export async function GET(request: NextRequest) {
           const { condition, target_result } = meta;
           const cleanCondition = (condition ?? '').toString().trim();
 
-          // ใช้ rate ที่คำนวณจาก group by (grandTotal/totalTarget * divideNumber)
+          // Use rate calculated from the group totals and KPI rate_formula.
           const actual = reportSum.rate;
 
           if (

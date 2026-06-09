@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const ENDPOINT_URL = process.env.ENDPOINT_URL;
 
+function toRateFormula(item: any) {
+  const raw = item.rate_formula ?? item.divide_number;
+  if (typeof raw === 'string' && raw.trim()) {
+    return raw.trim();
+  }
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return `{A}/{B}x${raw}`;
+  }
+  return '{A}/{B}x100';
+}
+
 export async function GET(request: NextRequest) {
   try {
     console.log('Fetching KPI data from Google Sheets API...');
@@ -68,8 +79,7 @@ export async function GET(request: NextRequest) {
       condition: String(item.condition ?? ''),
       target_result: typeof item.target_result === 'number' ? item.target_result : 
                     typeof item.target_result === 'string' ? parseFloat(item.target_result) || 0 : 0,
-      divide_number: typeof item.divide_number === 'number' ? item.divide_number : 
-                    typeof item.divide_number === 'string' ? parseFloat(item.divide_number) || 100 : 100,
+      rate_formula: toRateFormula(item),
       excellence: String(item.excellence ?? ''),
       area_level: String(item.area_level ?? ''),
       ssj_department: String(item.ssj_department ?? ''),

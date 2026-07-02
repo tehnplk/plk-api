@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { requireAdminRole } from '@/lib/adminAuth';
 import { runDbCleansing } from '@/lib/dbCleansing';
@@ -14,12 +15,61 @@ export async function getKpis() {
         id: 'asc'
       }
     });
-    return { success: true, data: kpis || [] };
+
+    const exclusions = await prisma.kpiAreaExclusion.findMany({
+      orderBy: [
+        { kpi_id: 'asc' },
+        { area_name: 'asc' },
+      ],
+    });
+    const exclusionMap = new Map<string, string[]>();
+    exclusions.forEach((exclusion) => {
+      const current = exclusionMap.get(exclusion.kpi_id) ?? [];
+      current.push(exclusion.area_name);
+      exclusionMap.set(exclusion.kpi_id, current);
+    });
+
+    return {
+      success: true,
+      data: (kpis || []).map((kpi) => ({
+        ...kpi,
+        excluded_area_names: exclusionMap.get(kpi.id) ?? [],
+      })),
+    };
   } catch (error) {
     console.error('Failed to fetch KPIs:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, error: `Failed to fetch KPIs: ${errorMessage}`, data: [] };
   }
+}
+
+function getExcludedAreaNames(formData: FormData) {
+  return Array.from(new Set(
+    formData
+      .getAll('excluded_area_names')
+      .map((value) => String(value).trim())
+      .filter(Boolean)
+  ));
+}
+
+async function replaceKpiAreaExclusions(
+  tx: Prisma.TransactionClient,
+  kpiId: string,
+  areaNames: string[],
+) {
+  await tx.kpiAreaExclusion.deleteMany({
+    where: { kpi_id: kpiId },
+  });
+
+  if (areaNames.length === 0) return;
+
+  await tx.kpiAreaExclusion.createMany({
+    data: areaNames.map((areaName) => ({
+      kpi_id: kpiId,
+      area_name: areaName,
+    })),
+    skipDuplicates: true,
+  });
 }
 
 async function createKpi(formData: FormData) {
@@ -30,6 +80,7 @@ async function createKpi(formData: FormData) {
       return { success: false, error: idResult.error };
     }
 
+    const excludedAreaNames = getExcludedAreaNames(formData);
     const data = {
       id: idResult.id,
       name: formData.get('name') as string,
@@ -56,8 +107,12 @@ async function createKpi(formData: FormData) {
       return { success: false, error: 'KPI ID already exists' };
     }
 
-    const kpi = await prisma.kpis.create({
-      data
+    const kpi = await prisma.$transaction(async (tx) => {
+      const created = await tx.kpis.create({
+        data
+      });
+      await replaceKpiAreaExclusions(tx, created.id, excludedAreaNames);
+      return created;
     });
 
     try {
@@ -89,6 +144,7 @@ async function updateKpi(id: string, formData: FormData) {
 
     const newId = idResult.id;
     
+    const excludedAreaNames = getExcludedAreaNames(formData);
     const data = {
       name: formData.get('name') as string,
       evaluation_criteria: formData.get('evaluation_criteria') as string,
@@ -128,6 +184,8 @@ async function updateKpi(id: string, formData: FormData) {
           data: { kpi_id: newId },
         });
 
+        await replaceKpiAreaExclusions(tx, newId, excludedAreaNames);
+
         return updated;
       });
 
@@ -141,9 +199,13 @@ async function updateKpi(id: string, formData: FormData) {
       return { success: true, data: kpi };
     }
 
-    const kpi = await prisma.kpis.update({
-      where: { id },
-      data
+    const kpi = await prisma.$transaction(async (tx) => {
+      const updated = await tx.kpis.update({
+        where: { id },
+        data
+      });
+      await replaceKpiAreaExclusions(tx, id, excludedAreaNames);
+      return updated;
     });
 
     try {
@@ -177,8 +239,13 @@ async function deleteKpi(id: string) {
       return { success: false, error: 'KPI not found' };
     }
 
-    await prisma.kpis.delete({
-      where: { id }
+    await prisma.$transaction(async (tx) => {
+      await tx.kpiAreaExclusion.deleteMany({
+        where: { kpi_id: id },
+      });
+      await tx.kpis.delete({
+        where: { id }
+      });
     });
 
     revalidatePath('/admin/kpis');

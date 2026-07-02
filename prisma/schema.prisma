@@ -57,6 +57,17 @@ model KpiReport {
   @@map("kpi_report")
 }
 
+model KpiAreaExclusion {
+  kpi_id     String
+  area_name  String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@id([kpi_id, area_name])
+  @@index([area_name])
+  @@map("kpi_area_exclusion")
+}
+
 model AccountUser {
   id                 Int      @id @default(autoincrement())
   account_id         String

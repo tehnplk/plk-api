@@ -18,6 +18,7 @@ export interface KpiItem {
   moph_department: string;
   kpiType?: string;
   template_url?: string;
+  excluded_area_names?: string[];
   last_synced_at?: string;
 }
 
@@ -82,6 +83,7 @@ export function transformKpiData(rawData: any[]): KpiItem[] {
     ssj_pm: String(item.ssj_pm ?? ''),
     moph_department: String(item.moph_department ?? ''),
     template_url: item.template_url,
+    excluded_area_names: Array.isArray(item.excluded_area_names) ? item.excluded_area_names : [],
     last_synced_at: item.last_synced_at,
   }));
 }

@@ -15,6 +15,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const excludedAreas = await prisma.kpiAreaExclusion.findMany({
+      where: { kpi_id: kpiId },
+      select: { area_name: true },
+    });
+    const excludedAreaSet = new Set(excludedAreas.map((area) => area.area_name));
+
     // Load KPI metadata for condition/target to compute status
     const kpiMeta = await prisma.kpis.findUnique({
       where: { id: kpiId },
@@ -27,7 +33,17 @@ export async function POST(request: NextRequest) {
     });
 
     // Prepare data for database (DB only; sync to sheet is handled in a separate endpoint)
-    const savePromises = Object.entries(editableData).map(async ([areaName, data]: [string, any]) => {
+    await prisma.kpiReport.deleteMany({
+      where: {
+        money_year: moneyYear,
+        kpi_id: kpiId,
+        area_name: { in: Array.from(excludedAreaSet) },
+      },
+    });
+
+    const savePromises = Object.entries(editableData)
+      .filter(([areaName]) => !excludedAreaSet.has(areaName))
+      .map(async ([areaName, data]: [string, any]) => {
       const target = parseFloat(data.target) || null;
       const monthlyResults = [
         parseFloat(data.result_oct) || null,
@@ -132,7 +148,7 @@ export async function POST(request: NextRequest) {
           status,
         }
       });
-    });
+      });
     
     // Execute all save operations
     await Promise.all(savePromises);
@@ -145,7 +161,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({ 
       message: 'Data saved successfully',
-      count: Object.keys(editableData).length
+        count: savePromises.length
     });
 
   } catch (error) {
@@ -170,10 +186,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const excludedAreas = await prisma.kpiAreaExclusion.findMany({
+      where: { kpi_id: kpiId },
+      select: { area_name: true },
+    });
+    const excludedAreaNames = excludedAreas.map((area) => area.area_name);
+
     const reports = await prisma.kpiReport.findMany({
       where: {
         money_year: parseInt(moneyYear),
-        kpi_id: kpiId
+        kpi_id: kpiId,
+        ...(excludedAreaNames.length > 0
+          ? { area_name: { notIn: excludedAreaNames } }
+          : {}),
       },
       orderBy: {
         area_name: 'asc'

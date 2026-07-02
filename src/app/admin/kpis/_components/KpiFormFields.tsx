@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { DISTRICTS } from '@/config/constants';
 
 interface Department {
   id: string;
@@ -15,7 +16,9 @@ export default function KpiFormFields({
 }) {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string>(kpi?.ssj_department ?? '');
+  const [selectedAreaLevel, setSelectedAreaLevel] = useState<string>(kpi?.area_level ?? 'อำเภอ');
   const [isLoading, setIsLoading] = useState(true);
+  const excludedAreaNames = new Set<string>(kpi?.excluded_area_names ?? []);
 
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -62,7 +65,8 @@ export default function KpiFormFields({
             <label className="block text-sm font-medium text-gray-700 mb-1">ระดับพื้นที่ *</label>
             <select
               name="area_level"
-              defaultValue={kpi?.area_level ?? 'อำเภอ'}
+              value={selectedAreaLevel}
+              onChange={(event) => setSelectedAreaLevel(event.target.value)}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
@@ -81,6 +85,28 @@ export default function KpiFormFields({
             />
           </div>
         </div>
+
+        {selectedAreaLevel === 'อำเภอ' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              อำเภอที่ไม่ต้องกรอกข้อมูล
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 rounded-md border border-gray-200 bg-white p-3">
+              {DISTRICTS.map((district) => (
+                <label key={district} className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    name="excluded_area_names"
+                    value={district}
+                    defaultChecked={excludedAreaNames.has(district)}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>{district}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อตัวชี้วัด *</label>

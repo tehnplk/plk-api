@@ -43,6 +43,22 @@ export async function GET(request: NextRequest) {
       ]
     });
 
+    const exclusions = await prisma.kpiAreaExclusion.findMany({
+      where: {
+        kpi_id: { in: kpis.map((kpi) => kpi.id) },
+      },
+      orderBy: [
+        { kpi_id: 'asc' },
+        { area_name: 'asc' },
+      ],
+    });
+    const exclusionMap = new Map<string, string[]>();
+    exclusions.forEach((exclusion) => {
+      const current = exclusionMap.get(exclusion.kpi_id) ?? [];
+      current.push(exclusion.area_name);
+      exclusionMap.set(exclusion.kpi_id, current);
+    });
+
     // Get current money year (Buddhist year)
     const currentYear = new Date().getFullYear();
     const currentMoneyYear = moneyYear ? parseInt(moneyYear) : currentYear + 544;
@@ -126,6 +142,7 @@ export async function GET(request: NextRequest) {
         moph_department: kpi.moph_department,
         kpi_type: kpi.kpi_type,
         template_url: kpi.template_url,
+        excluded_area_names: exclusionMap.get(kpi.id) ?? [],
         last_synced_at: kpi.last_synced_at,
       };
     });

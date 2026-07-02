@@ -25,6 +25,7 @@ type Kpi = {
   moph_department: string | null;
   kpi_type: string;
   template_url: string | null;
+  excluded_area_names?: string[];
 };
 
 type ModalMode = 'create' | 'edit';

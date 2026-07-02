@@ -24,6 +24,7 @@ interface KPIDetail {
   moph_department?: string;
   kpiType?: string;
   condition?: string;
+  excludedAreaNames?: string[];
 }
 
 interface MonthlyData {
@@ -144,6 +145,10 @@ export default function KPIDetailModal({
 
         // Set KPI details from metadata
         const sourceData = kpiMetadata || {};
+        const excludedAreaNames = Array.isArray(kpiMetadata?.excluded_area_names)
+          ? kpiMetadata.excluded_area_names.map((name: unknown) => String(name))
+          : [];
+        const activeDistricts = DISTRICTS.filter((districtName) => !excludedAreaNames.includes(districtName));
         setKpiDetail({
           id: kpiId,
           name: kpiMetadata?.name || 'ตัวชี้วัดตัวอย่าง (Mockup)',
@@ -159,6 +164,7 @@ export default function KPIDetailModal({
           moph_department: kpiMetadata?.moph_department || '',
           kpiType: kpiMetadata?.kpi_type || '',
           condition: kpiMetadata?.condition || '',
+          excludedAreaNames,
         });
 
         // Prepare monthly data for chart and district data for table
@@ -251,14 +257,14 @@ export default function KPIDetailModal({
                   recordMap.set(String(r.area_name), r);
                 });
 
-                const merged: DistrictData[] = DISTRICTS.map((districtName) => {
+                const merged: DistrictData[] = activeDistricts.map((districtName) => {
                   const record = recordMap.get(districtName);
                   return record ? computeRowFromRecord(record) : emptyRow(districtName);
                 });
 
                 const extras = realData
                   .map((r: any) => String(r.area_name))
-                  .filter((name: string) => !DISTRICTS.includes(name));
+                  .filter((name: string) => !DISTRICTS.includes(name) && !excludedAreaNames.includes(name));
 
                 extras.forEach((name: string) => {
                   const record = recordMap.get(name);
@@ -316,7 +322,7 @@ export default function KPIDetailModal({
           // สร้างแถวว่างสำหรับให้ user กรอกเอง ตามระดับตัวชี้วัด
           const isDistrictLevel = kpiMetadata?.area_level === 'อำเภอ';
           const isProvinceLevel = kpiMetadata?.area_level === 'จังหวัด';
-          const areaNames = isDistrictLevel ? DISTRICTS : isProvinceLevel ? ['จังหวัดพิษณุโลก'] : ['จังหวัด'];
+              const areaNames = isDistrictLevel ? activeDistricts : isProvinceLevel ? ['จังหวัดพิษณุโลก'] : ['จังหวัด'];
 
           districtTableData = areaNames.map((areaName: string) => ({
             area_name: areaName,
